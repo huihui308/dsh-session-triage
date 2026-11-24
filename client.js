@@ -65,7 +65,7 @@ window.__ModuleLoader__.load({
       'settings.showBars': '显示处理状态色条',
       'shortcut.nextUnread': '下一个未读会话',
       'shortcut.cycleTriage': '循环当前会话处理状态',
-      'board.title': '分诊台',
+      'board.title': '会话看板',
       'board.active': '未闭环 {n}',
       'board.all': '全部',
       'board.running': '运行中',
@@ -125,7 +125,7 @@ window.__ModuleLoader__.load({
       'settings.showBars': 'Show triage bar',
       'shortcut.nextUnread': 'Next unread session',
       'shortcut.cycleTriage': 'Cycle current session triage',
-      'board.title': 'Triage board',
+      'board.title': 'Session board',
       'board.active': '{n} open',
       'board.all': 'All',
       'board.running': 'Running',
@@ -482,6 +482,31 @@ window.__ModuleLoader__.load({
 
     const BOARD_ID = 'session-unread-board'
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+    /* The layout drops an active global panel while our client bundle is
+       hot-reloaded. This page-scoped marker lets the new bundle put the board
+       back; the timeOrigin guard keeps a real page reload on the conversation. */
+    const BOARD_RELOAD_KEY = 'dsh.session-triage.board-active.v1'
+    const BOARD_PAGE_ORIGIN = (() => {
+      try { return performance.timeOrigin } catch (_error) { return 0 }
+    })()
+    const readBoardReload = () => {
+      try {
+        const raw = sessionStorage.getItem(BOARD_RELOAD_KEY)
+        if (raw !== null) {
+          const value = JSON.parse(raw)
+          if (value !== null && typeof value === 'object' && value.page === BOARD_PAGE_ORIGIN) return true
+        }
+      } catch (_error) { /* storage unavailable or bad JSON */ }
+      try { sessionStorage.removeItem(BOARD_RELOAD_KEY) } catch (_error) { /* ignore */ }
+      return false
+    }
+    const markBoardReload = () => {
+      try { sessionStorage.setItem(BOARD_RELOAD_KEY, JSON.stringify({ page: BOARD_PAGE_ORIGIN })) } catch (_error) { /* ignore */ }
+    }
+    const clearBoardReload = () => {
+      try { sessionStorage.removeItem(BOARD_RELOAD_KEY) } catch (_error) { /* ignore */ }
+    }
     const GROUP_ORDER = ['running', 'red', 'amber', 'recent', 'closed']
     const GROUP_META = {
       running: { label: 'board.running', dot: 'running', bar: 'running' },
@@ -1029,6 +1054,7 @@ window.__ModuleLoader__.load({
           const timer = window.setInterval(() => setNow(Date.now()), 60 * 1000)
           return () => { window.clearInterval(timer) }
         }, [])
+        React.useEffect(() => { markBoardReload() }, [])
 
         const workspaceRows = React.useMemo(() => {
           const bySession = new Map()
@@ -1121,6 +1147,7 @@ window.__ModuleLoader__.load({
           setShowClosed(false)
         }
         const open = (id) => {
+          clearBoardReload()
           try {
             void Promise.resolve(ctx.uiWorkspace.openSession(id)).catch(() => {})
           } catch (_error) { /* the row stays open on failure */ }
@@ -1281,11 +1308,43 @@ window.__ModuleLoader__.load({
         label: () => translate()('board.title'),
       }, (props) => h(BoardIcon, { size: props?.size ?? 16 })))
 
+      ctx.effect(() => {
+        const clearOutside = (event) => {
+          const board = document.querySelector('.dsu-board')
+          const entry = typeof event.target?.closest === 'function'
+            ? event.target.closest('button[aria-label]')
+            : null
+          if (entry !== null && entry.getAttribute('aria-label') === translate()('board.title')) return
+          if (board === null || !board.contains(event.target)) clearBoardReload()
+        }
+        window.addEventListener('pointerdown', clearOutside, true)
+        window.addEventListener('keydown', clearOutside, true)
+        return () => {
+          window.removeEventListener('pointerdown', clearOutside, true)
+          window.removeEventListener('keydown', clearOutside, true)
+        }
+      }, 'session-triage: clear board marker outside the board')
+
+      ctx.effect(() => {
+        if (!readBoardReload()) return
+        const layout = ctx.layout
+        if (layout === undefined) return
+        let cancelled = false
+        const restore = () => {
+          if (cancelled) return
+          try {
+            if (layout.panelInfo.getSnapshot().activePanelId === null) layout.selectPanel(BOARD_ID)
+          } catch (_error) { /* entry not visible yet; leave the conversation */ }
+        }
+        const timer = setTimeout(restore, 0)
+        return () => { cancelled = true; clearTimeout(timer) }
+      }, 'session-triage: restore board after client reload')
+
     }
 
     return {
       name: 'dsh-session-triage',
-      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace'],
+      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace', 'layout'],
       apply,
     }
   },
