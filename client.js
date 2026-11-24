@@ -731,6 +731,57 @@ window.__ModuleLoader__.load({
         return dispose
       }, 'session-unread: clear on open')
 
+      /* A run that ends while the board is the active surface can come back
+         from the host with completionUnread=false: the board is treated as
+         "seen" even though the user never opened the session. Track the
+         running -> idle edge ourselves and keep that result unread. */
+      let previousRuns = null
+      const boardIsActive = () => {
+        try {
+          return ctx.layout.panelInfo.getSnapshot().activePanelId === BOARD_ID
+        } catch (_error) {
+          return false
+        }
+      }
+      const syncRuns = () => {
+        let list
+        try {
+          list = ctx.sessions.list.getSnapshot()
+        } catch (_error) {
+          return
+        }
+        const current = currentSessionId(list)
+        const boardActive = boardIsActive()
+        const next = new Map()
+        for (const id of list.ids) {
+          const row = list.byId[id]
+          if (row === undefined || row.blank === true || row.origin === 'subagent') continue
+          const status = statusOf(id)
+          const running = status !== undefined && status !== null && typeof status.running === 'boolean'
+            ? status.running === true
+            : row.running === true
+          next.set(id, running)
+          if (previousRuns === null) continue
+          if (previousRuns.get(id) !== true || running) continue
+          if (isArchived(id)) continue
+          const entry = triage.getSnapshot()[id]
+          if (entry !== undefined && entry !== null && entry.level === 'green') continue
+          if (boardActive || current !== id) {
+            if (!unread.has(id)) unread.set(id, Date.now())
+          }
+        }
+        previousRuns = next
+      }
+      ctx.effect(() => {
+        const disposeSessions = ctx.sessions.list.subscribe(syncRuns)
+        const disposeStatus = ctx.uiSession.sessionStatus.subscribe(syncRuns)
+        syncRuns()
+        return () => {
+          disposeSessions()
+          disposeStatus()
+        }
+      }, 'session-unread: fallback completion unread')
+
       /* Another tab's mark arrives through the storage event. */
       ctx.effect(() => {
         if (typeof window === 'undefined') return
