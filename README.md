@@ -4,7 +4,7 @@
 
 > DSH Web 的会话看板：给会话加未读和红 / 黄 / 绿处理状态，再用一个跨工作区总览页把待处理会话收拢。
 
-![Version](https://img.shields.io/badge/version-0.5.2-4c6fff)
+![Version](https://img.shields.io/badge/version-0.5.3-4c6fff)
 ![License](https://img.shields.io/badge/license-MIT-30a46c)
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
