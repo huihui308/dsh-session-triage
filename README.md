@@ -1,6 +1,10 @@
-# dsh-session-unread
+# dsh-session-triage
 
-给 DSH Web 会话列表加两个用户自己的信号（**未读绿点**、**红 / 黄 / 绿处理状态**），再加一个跨工作区的**「分诊台」总览页**。
+DSH Web 会话分诊插件：未读标记、红 / 黄 / 绿处理状态、跨工作区分诊台，支持可改键快捷键。
+
+> 原名 `dsh-session-unread`，2026-11-24 更名；localStorage 键仍是 `dsh.session-unread.*` / `dsh.session-triage.*`，已有标记不会丢。
+
+仓库：<https://github.com/huihui308/dsh-session-triage>
 
 ## 解决什么问题
 
@@ -96,26 +100,27 @@ DSH 侧栏原生绿点来自 `UiSession.completionUnread`：会话在后台跑�
 - 处理状态：`localStorage["dsh.session-triage.v1"]`，`{ "<sessionId>": { level, reason, source, updatedAt } }`
 - 设置：`localStorage["dsh.session-unread.settings.v1"]`，`{ autoSuggest, showBars }`
 - 未读 / 处理状态表最多 500 条、180 天过期；设置表只有一项。坏 JSON 按默认值处理。
+- 更名后存储键保持不变：`dsh.session-unread.v1`、`dsh.session-triage.v1`、`dsh.session-unread.settings.v1`。
 - 作用域：当前浏览器 + 当前 origin。换浏览器 / 设备不同步；会话本身不受影响。
 
 ## 安装（本机 profile）
 
-源码目录：`/mnt/sdb1/agent/dsh-session-unread`
+源码目录：`/mnt/sdb1/agent/dsh-session-triage`
 
 ### 方式 A：dsh CLI（本机已用这条）
 
 ```bash
-dsh plugin --profile web add link:/mnt/sdb1/agent/dsh-session-unread
+dsh plugin --profile web add link:/mnt/sdb1/agent/dsh-session-triage
 ```
 
-`dsh plugin add` 会建好 `link:` 依赖，并把 `dsh-session-unread` 自动追加到 `dsh.profile.bundles`。宿主开启 HMR 时直接重新挂载，不用重启。
+`dsh plugin add` 会建好 `link:` 依赖，并把 `dsh-session-triage` 自动追加到 `dsh.profile.bundles`。宿主开启 HMR 时直接重新挂载，不用重启。
 
 ### 方式 B：Plugin Manager
 
 在 DSH Web 侧栏的 **Plugins** 页面里用本地开发链接安装：
 
 ```text
-link:/mnt/sdb1/agent/dsh-session-unread
+link:/mnt/sdb1/agent/dsh-session-triage
 ```
 
 安装并启用后刷新页面。

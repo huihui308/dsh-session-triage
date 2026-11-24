@@ -1,8 +1,24 @@
 {
-  "name": "dsh-session-unread",
-  "version": "0.4.0",
+  "name": "dsh-session-triage",
+  "version": "0.5.0",
   "private": true,
-  "description": "会话右键未读标记 + 红黄绿处理状态 + 跨工作区分诊台：设置页开关、可改键快捷键、行首绿点/左侧色条。",
+  "description": "DSH Web 会话分诊：未读标记、红黄绿处理状态、跨工作区分诊台，支持可改键快捷键。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "session",
+    "unread",
+    "triage",
+    "web"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huihui308/dsh-session-triage.git"
+  },
+  "homepage": "https://github.com/huihui308/dsh-session-triage#readme",
+  "bugs": {
+    "url": "https://github.com/huihui308/dsh-session-triage/issues"
+  },
   "type": "module",
   "main": "index.js",
   "exports": {
