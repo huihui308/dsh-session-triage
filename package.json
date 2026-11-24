@@ -1,8 +1,8 @@
 {
   "name": "dsh-session-triage",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
-  "description": "DSH Web 会话分诊：未读标记、红黄绿处理状态、跨工作区分诊台，支持可改键快捷键。",
+  "description": "DSH Web 会话看板：未读标记、红黄绿处理状态、跨工作区总览，支持可改键快捷键。",
   "keywords": [
     "dsh",
     "dsh-plugin",
