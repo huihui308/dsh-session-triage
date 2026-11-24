@@ -1,5 +1,6 @@
-# dsh-session-unread bundle patch: mount the session-unread plugin.
+# dsh-session-triage bundle patch: mount the session-triage plugin.
+# `id` stays session-unread so existing profile state/patches keep resolving.
 # The browser half (dsh.client + exports["./client"]) carries all behavior.
 - insert:
     - id: session-unread
-      name: 'dsh-session-unread'
+      name: 'dsh-session-triage'

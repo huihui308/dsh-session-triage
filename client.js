@@ -1,5 +1,5 @@
 /**
- * dsh-session-unread — browser half.
+ * dsh-session-triage — browser half.
  *
  * Two independent, user-owned signals on top of core's own status dot:
  *
@@ -21,7 +21,7 @@
  */
 
 window.__ModuleLoader__.load({
-  id: 'dsh-session-unread',
+  id: 'dsh-session-triage',
   factory(require) {
     const React = require('react')
     const primitives = require('@deepseek-ai/dsh-client-ui-primitives')
@@ -719,7 +719,7 @@ window.__ModuleLoader__.load({
       /* The left-edge triage bar, using the row's existing 3px inline border. */
       if (typeof document !== 'undefined') {
         const styleEl = document.createElement('style')
-        styleEl.dataset.plugin = 'dsh-session-unread'
+        styleEl.dataset.plugin = 'dsh-session-triage'
         styleEl.dataset.pluginCss = 'triage.css'
         document.head.appendChild(styleEl)
         const renderBars = () => {
@@ -1284,7 +1284,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      name: 'dsh-session-unread',
+      name: 'dsh-session-triage',
       inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace'],
       apply,
     }
