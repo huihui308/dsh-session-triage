@@ -1,48 +1,81 @@
 # dsh-session-unread
 
-给 DSH Web 的会话列表加一个「用户自己的未读标记」。
+给 DSH Web 会话列表加两个用户自己的信号：**未读绿点** 和 **三级处理状态（红 / 黄 / 绿）**。
 
 ## 解决什么问题
 
-DSH 侧栏的绿点（`StateDot state="done"`）来自 `UiSession.completionUnread`：
-某个会话在你没看它的时候跑完了，它就亮；你点开会话，绿点立刻消失，而且没有
-任何办法把它找回来。会话一多、跨几个工作区，想回头找那次结果就只能靠翻列表。
+DSH 侧栏原生绿点来自 `UiSession.completionUnread`：会话在后台跑完时亮，点开就消失，而且没有恢复入口。会话一多、跨几个工作区，回头找结果只能翻列表。
 
-这个插件在右键菜单里加一项「标记为未读」，把绿点重新点亮：
+这个插件补两层：
 
-- 绿点和原生的「已完成」点是同一个 `StateDot`，同一位置（行首 16px 状态格）。
-- 刷新页面、重连、宿主重启都还在（浏览器 `localStorage`）。
-- 点开该会话时自动清除，行为跟微信的未读一致。
-- 会话正在运行 / 等待审批 / 有待回答时，原生状态点优先，二者不会并排出现。
-- 悬停卡片里多一行「未读 · 点开后自动清除」，解释这个点的归属。
+- **未读**：右键「标记为未读」，把原生同款绿点重新点亮；点开会话自动清除。
+- **处理状态**：右键「处理状态」选红 / 黄 / 绿，行左侧出现色条，常驻；刷新后仍在；运行中 / 审批中也能看见。
+
+## 处理状态怎么定义
+
+用「处理状态」而不是抽象的「重要性」：
+
+| 状态 | 含义 | 典型场景 |
+|---|---|---|
+| 红 · 待我处理 | 需要我下一步动作 | 未决问题、待决策、风险、截止、客户 / 合同 / 面试 |
+| 黄 · 待回看 | 有产出 / 结论，但未归档 | 方案、分析、修复、开发完成、有未读结果 |
+| 绿 · 已闭环 | 可不再管 | 已交付、已解决、参考资料 |
+
+绿点仍然是「未读」，和状态色条是两条独立通道。
 
 ## 效果
 
-标记后行首重新出现绿点：
+![侧栏状态](docs/sidebar.png)
 
-![行首绿点](docs/row-dot.png)
+右键菜单里的「处理状态」子菜单：
 
-![侧栏绿点](docs/sidebar.png)
+![处理状态菜单](docs/triage-menu.png)
 
-右键菜单里多一项（已标记时变为「取消未读标记」）：
-
-![右键菜单](docs/context-menu.png)
-
-悬停卡片里说明这个点由谁维护：
+悬停卡片同时解释未读和状态：
 
 ![悬停卡片](docs/hover-card.png)
 
 ## 使用
 
-1. 在侧栏会话上点右键（或该行的 `…` 菜单）。
-2. 选「标记为未读」，行首出现绿点。
-3. 想取消时再右键选「取消未读标记」；点开该会话也会自动清除。
+### 未读
+
+1. 右键会话（或该行的 `…` 菜单）→「标记为未读」，行首出现绿点。
+2. 再右键 →「取消未读标记」；点开该会话也会自动清除。
+
+### 处理状态
+
+1. 右键 →「处理状态」→ 红 / 黄 / 绿。
+2. 再右键 →「清除处理状态」。
+3. 菜单里可能出现「采纳建议：红（…）」：这是客户端按标题和实时状态算出的建议，点一下才会写入，不会自动应用。
+
+自动建议只看**标题 + 实时状态**（等待你响应、有未读结果），不读会话内容，不调用模型；判断错时手动覆盖即可。
+
+## 视觉
+
+- 状态色条用行本身已有的透明内缩边（`border-inline`）承载：改成 5px 并同步 `padding-inline-start`，内容位置不变，不挤压时间 / 操作区。
+- 未读绿点走 `sidebar.session.row.leading` 槽位；原生运行 / 审批 / 完成点存在时该槽位本就不渲染，不会和状态色条打架。
+- 色条独立于行首状态格，所以运行中、等待审批时也能看到用户标的处理状态。
+
+## 存储
+
+- 未读：`localStorage["dsh.session-unread.v1"]`，`{ "<sessionId>": <marked-at epoch ms> }`
+- 处理状态：`localStorage["dsh.session-triage.v1"]`，`{ "<sessionId>": { level, reason, source, updatedAt } }`
+- 两个表都最多 500 条、180 天过期；坏 JSON 按空表处理。
+- 作用域：当前浏览器 + 当前 origin。换浏览器 / 设备不同步；会话本身不受影响。
 
 ## 安装（本机 profile）
 
 源码目录：`/mnt/sdb1/agent/dsh-session-unread`
 
-### 方式 A：Plugin Manager（推荐）
+### 方式 A：dsh CLI（本机已用这条）
+
+```bash
+dsh plugin --profile web add link:/mnt/sdb1/agent/dsh-session-unread
+```
+
+`dsh plugin add` 会建好 `link:` 依赖，并把 `dsh-session-unread` 自动追加到 `dsh.profile.bundles`。宿主开启 HMR 时直接重新挂载，不用重启。
+
+### 方式 B：Plugin Manager
 
 在 DSH Web 侧栏的 **Plugins** 页面里用本地开发链接安装：
 
@@ -50,52 +83,22 @@ DSH 侧栏的绿点（`StateDot state="done"`）来自 `UiSession.completionUnre
 link:/mnt/sdb1/agent/dsh-session-unread
 ```
 
-安装并启用后刷新页面。HMR 开启时宿主不需要重启。
-
-### 方式 B：dsh CLI（本机已用这条）
-
-```bash
-dsh plugin --profile web add link:/mnt/sdb1/agent/dsh-session-unread
-```
-
-`dsh plugin add` 会在 profile 里建好 `link:` 依赖，并把
-`dsh-session-unread` 自动追加到 `dsh.profile.bundles`。宿主开启 HMR 时会
-直接重新挂载，不用重启；没有 HMR 时重启 dsh web 生效。
+安装并启用后刷新页面。
 
 ### 方式 C：手工挂载（兜底）
 
-在 profile 目录（本机 `~/.dsh/profiles/web`）里建软链：
-
-```bash
-ln -s /mnt/sdb1/agent/dsh-session-unread node_modules/dsh-session-unread
-```
-
-在 `package.json` 的 `dependencies` 里加 `link:` 依赖，再把
-`dsh-session-unread` 追加到 `dsh.profile.bundles` 数组末尾，最后让宿主
-重新加载配置（有 HMR 时改 bundles 列表即可，没有则重启）。
+在 profile 目录（本机 `~/.dsh/profiles/web`）里建软链，补 `link:` 依赖，再把包名追加到 `dsh.profile.bundles`。
 
 ## 边界
 
-- 标记是**浏览器本地**的：换浏览器、换设备、清空站点数据后不会带过去；
-  会话本身完全不受影响。
-- 标记**不会改变会话排序**。会话仍按最近更新排；如果它被折叠在「显示更多」
-  后面，需要先展开列表（或直接搜索标题）。
-- 已归档会话的行首本来就不显示状态点，因此归档行不提供这个菜单项。
+- 未读和处理状态都是浏览器本地，换设备不同步。
+- 不改变会话排序；没有「只看红 / 黄 / 未读」过滤。会话被折叠在「显示更多」后面时需要先展开或搜索。
+- 已归档行不显示状态色条，也不提供这两个菜单项。
+- 自动建议是启发式，可能误判；默认只建议，不自动应用。
+- 没有读会话内容、没有调用模型；如果要做内容级判断或一句话结论，需要加 host 半片。
 
-## 存储
+## 后续可加
 
-- key：`localStorage["dsh.session-unread.v1"]`
-- 结构：`{ "<sessionId>": <marked-at epoch ms> }`
-- 上限：最多 500 条，超过 180 天自动丢弃；损坏的 JSON 按空表处理。
-- 作用域：当前浏览器 + 当前 origin（`http://192.168.171.198:3080`）。
-  换浏览器或清空站点数据后标记丢失，会话本身不受影响。
-
-## 设计取舍
-
-- **不改核心**：不碰 `UiSession.completionUnread` 私有集合，也不 monkey-patch
-  `publishStatus`。用官方的 `sidebar.session.row.leading` 槽位渲染同一个
-  `StateDot`，核心升级时不会因为私有字段改名而炸。
-- **只做加法**：原生状态点存在时槽位本就不渲染，所以不会和运行中 / 审批中
-  的状态打架。
-- **客户端本地**：未读是浏览器视角的偏好，不值得进会话日志或同步到服务端；
-  代价是换浏览器要重新标。
+- 内容级自动评级（host 半片，读最后一条 assistant 消息）。
+- 侧栏「分诊台」面板：按红 / 黄 / 未读 / 最近闭环分组。
+- hover 一行结论摘要。

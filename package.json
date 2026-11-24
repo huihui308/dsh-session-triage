@@ -1,8 +1,8 @@
 {
   "name": "dsh-session-unread",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "会话右键「标记为未读」：让已经点开、绿点消失的会话重新带一个绿点，刷新后仍在，点开会话自动清除。",
+  "description": "会话右键未读标记 + 红黄绿处理状态：行首绿点、左侧色条、刷新仍在、点开清除，标题启发式建议。",
   "type": "module",
   "main": "index.js",
   "exports": {
