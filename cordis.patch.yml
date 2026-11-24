@@ -1,0 +1,5 @@
+# dsh-session-unread bundle patch: mount the session-unread plugin.
+# The browser half (dsh.client + exports["./client"]) carries all behavior.
+- insert:
+    - id: session-unread
+      name: 'dsh-session-unread'
