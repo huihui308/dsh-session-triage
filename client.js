@@ -562,7 +562,9 @@ window.__ModuleLoader__.load({
 .dsu-row-bar.green { background: var(--dsw-alias-state-success-primary, #30a46c); }
 .dsu-row-bar.recent { background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.18)); }
 .dsu-row-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.dsu-row-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; line-height: 20px; font-weight: 500; }
+.dsu-row-title { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; line-height: 20px; font-weight: 500; }
+.dsu-row-title-text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dsu-title-unread { flex: none; height: 18px; padding: 0 6px; border-radius: 999px; font-size: 10px; line-height: 18px; letter-spacing: 0.02em; background: rgba(48, 164, 108, 0.12); }
 .dsu-row-meta { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
 .dsu-row-workspace { max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .dsu-sep { opacity: 0.6; }
@@ -1186,7 +1188,6 @@ window.__ModuleLoader__.load({
           const badges = []
           if (row.running) badges.push(badge('running', tr('board.runBadge'), 'running', true))
           if (row.pending) badges.push(badge('pending', tr('board.pending'), 'red', false))
-          if (row.unread) badges.push(badge('unread', tr('board.unread'), 'unread', false))
           if (row.level !== undefined && row.group === 'running') {
             badges.push(badge('level', tr('level.short.' + row.level), row.level, false))
           }
@@ -1208,7 +1209,9 @@ window.__ModuleLoader__.load({
           },
           h('span', { className: 'dsu-row-bar ' + row.bar, 'aria-hidden': 'true' }),
           h('div', { className: 'dsu-row-main' },
-            h('div', { className: 'dsu-row-title', title: row.title }, row.title),
+            h('div', { className: 'dsu-row-title', title: row.title },
+              h('span', { className: 'dsu-row-title-text' }, row.title),
+              row.unread ? h('span', { className: 'dsu-badge unread dsu-title-unread' }, tr('board.unread')) : null),
             h('div', { className: 'dsu-row-meta' },
               h('span', { className: 'dsu-row-workspace', title: row.workspaceTitle }, row.workspaceTitle),
               h('span', { className: 'dsu-sep', 'aria-hidden': 'true' }, '·'),
