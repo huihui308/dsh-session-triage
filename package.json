@@ -1,8 +1,8 @@
 {
   "name": "dsh-session-unread",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "会话右键未读标记 + 红黄绿处理状态：设置页开关、键盘快捷键、行首绿点/左侧色条。",
+  "description": "会话右键未读标记 + 红黄绿处理状态 + 跨工作区分诊台：设置页开关、可改键快捷键、行首绿点/左侧色条。",
   "type": "module",
   "main": "index.js",
   "exports": {
