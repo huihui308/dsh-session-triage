@@ -50,6 +50,26 @@ DSH 侧栏原生绿点来自 `UiSession.completionUnread`：会话在后台跑�
 
 自动建议只看**标题 + 实时状态**（等待你响应、有未读结果），不读会话内容，不调用模型；判断错时手动覆盖即可。
 
+## 设置与快捷键
+
+### 设置 → 通用 → 会话标记
+
+- **自动建议处理状态**：关掉后菜单和悬停不再出现「采纳建议」；手动红 / 黄 / 绿仍可用。
+- **显示处理状态色条**：关掉后行左侧不再画色条；处理状态本身保留，右键菜单和悬停仍可看 / 改。
+
+### 快捷键
+
+在 **设置 → 通用 → 键盘快捷键 → 编辑快捷键** 里可以改；插件命令会自动出现在列表，不需要单独做按键录制页。
+
+| 命令 | 默认键 | 行为 |
+|---|---|---|
+| 下一个未读会话 | `Ctrl+Shift+,`（macOS `Cmd+Shift+,`） | 跳到下一个有未读标记的会话并打开；只有当前会话有标记时不动 |
+| 循环当前会话处理状态 | `Ctrl+Shift+.`（macOS `Cmd+Shift+.`） | 无 → 红 → 黄 → 绿 → 无 |
+
+- Web 端 DSH 只接受少量组合（`Mod+/`、`Mod+Shift+,`、`Mod+Shift+.`）；`Mod+/` 已被「打开键盘快捷键」占用，所以插件默认用后两个。
+- 快捷键在输入框 / 编辑器聚焦时也生效（`regions: ['page', 'editable']`），因为都是带修饰键的标点组合，不会挡正常输入。
+- 如果默认键在某平台冲突，插件会把这个命令留空（仍出现在快捷键列表里，手动录一个即可），不会让插件加载失败。
+
 ## 视觉
 
 - 状态色条用行本身已有的透明内缩边（`border-inline`）承载：改成 5px 并同步 `padding-inline-start`，内容位置不变，不挤压时间 / 操作区。
@@ -60,7 +80,8 @@ DSH 侧栏原生绿点来自 `UiSession.completionUnread`：会话在后台跑�
 
 - 未读：`localStorage["dsh.session-unread.v1"]`，`{ "<sessionId>": <marked-at epoch ms> }`
 - 处理状态：`localStorage["dsh.session-triage.v1"]`，`{ "<sessionId>": { level, reason, source, updatedAt } }`
-- 两个表都最多 500 条、180 天过期；坏 JSON 按空表处理。
+- 设置：`localStorage["dsh.session-unread.settings.v1"]`，`{ autoSuggest, showBars }`
+- 未读 / 处理状态表最多 500 条、180 天过期；设置表只有一项。坏 JSON 按默认值处理。
 - 作用域：当前浏览器 + 当前 origin。换浏览器 / 设备不同步；会话本身不受影响。
 
 ## 安装（本机 profile）

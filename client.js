@@ -30,8 +30,10 @@ window.__ModuleLoader__.load({
     const NS = 'session-unread'
     const UNREAD_KEY = 'dsh.session-unread.v1'
     const TRIAGE_KEY = 'dsh.session-triage.v1'
+    const SETTINGS_KEY = 'dsh.session-unread.settings.v1'
     const MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000
     const MAX_ENTRIES = 500
+    const PROFILES = ['web:macos', 'web:windows', 'web:linux', 'desktop:macos', 'desktop:windows', 'desktop:linux']
 
     const zh = {
       'menu.mark': '标记为未读',
@@ -57,6 +59,12 @@ window.__ModuleLoader__.load({
       'reason.title': '标题含“{word}”',
       'reason.manual': '手动',
       'reason.generic': '状态提示',
+      'settings.title': '会话标记',
+      'settings.description': '未读绿点、处理状态色条；快捷键在「键盘快捷键」里修改。',
+      'settings.autoSuggest': '自动建议处理状态',
+      'settings.showBars': '显示处理状态色条',
+      'shortcut.nextUnread': '下一个未读会话',
+      'shortcut.cycleTriage': '循环当前会话处理状态',
     }
     const en = {
       'menu.mark': 'Mark as unread',
@@ -82,6 +90,12 @@ window.__ModuleLoader__.load({
       'reason.title': 'title contains “{word}”',
       'reason.manual': 'manual',
       'reason.generic': 'status hint',
+      'settings.title': 'Session marks',
+      'settings.description': 'Unread dot and triage bar. Shortcuts are edited under Keyboard shortcuts.',
+      'settings.autoSuggest': 'Suggest triage status',
+      'settings.showBars': 'Show triage bar',
+      'shortcut.nextUnread': 'Next unread session',
+      'shortcut.cycleTriage': 'Cycle current session triage',
     }
 
     const LEVELS = {
@@ -198,8 +212,41 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function normalizeSettings(raw) {
+      const value = raw && typeof raw === 'object' ? raw : {}
+      return {
+        autoSuggest: value.autoSuggest !== false,
+        showBars: value.showBars !== false,
+      }
+    }
+
+    function createSettingsStore() {
+      let snapshot = Object.freeze(normalizeSettings(readJson(SETTINGS_KEY)))
+      const listeners = new Set()
+      const emit = () => {
+        for (const listener of [...listeners]) listener()
+      }
+      return {
+        getSnapshot: () => snapshot,
+        subscribe: (listener) => {
+          listeners.add(listener)
+          return () => { listeners.delete(listener) }
+        },
+        set: (next) => {
+          snapshot = Object.freeze(normalizeSettings(next))
+          writeRaw(SETTINGS_KEY, JSON.stringify(snapshot))
+          emit()
+        },
+        refresh: () => {
+          snapshot = Object.freeze(normalizeSettings(readJson(SETTINGS_KEY)))
+          emit()
+        },
+      }
+    }
+
     const unread = createMapStore(UNREAD_KEY, normalizeUnread)
     const triage = createMapStore(TRIAGE_KEY, normalizeTriage)
+    const settings = createSettingsStore()
 
     /* External session/status changes that a hover line or menu should reflect. */
     const revision = { value: 0, listeners: new Set() }
@@ -319,6 +366,62 @@ window.__ModuleLoader__.load({
       return lines.length === 0 ? null : h(React.Fragment, null, ...lines)
     }
 
+    /** Settings -> General row: auto-suggest and triage-bar switches. */
+    function SessionMarkSettings({ t }) {
+      const current = React.useSyncExternalStore(settings.subscribe, settings.getSnapshot)
+      const tr = typeof t === 'function' ? t : (key) => key
+      const toggle = (label, value, onChange) => h('label', {
+        style: {
+          display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '12px', lineHeight: '18px',
+          color: 'var(--dsw-alias-label-secondary)', cursor: 'pointer',
+        },
+      },
+      h('button', {
+        type: 'button',
+        role: 'switch',
+        'aria-checked': value,
+        'aria-label': label,
+        onClick: () => { onChange(!value) },
+        style: {
+          position: 'relative', width: '36px', height: '20px', padding: '0',
+          border: 'none', borderRadius: '10px', cursor: 'pointer', flex: 'none',
+          background: value ? 'var(--dsw-alias-state-business-primary)' : 'var(--dsw-alias-border-l2)',
+          transition: 'background 120ms ease',
+        },
+      }, h('span', {
+        'aria-hidden': 'true',
+        style: {
+          position: 'absolute', top: '2px', left: value ? '18px' : '2px',
+          width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.25)', transition: 'left 120ms ease',
+        },
+      })), h('span', null, label))
+      return h('div', {
+        style: {
+          display: 'flex', alignItems: 'center', gap: '16px',
+          padding: '16px 0', borderBottom: '1px solid var(--dsw-alias-border-l2)',
+        },
+      },
+      h('div', {
+        style: {
+          flex: '1', minWidth: '0', display: 'flex', flexDirection: 'column',
+          gap: '4px', paddingRight: '24px',
+        },
+      },
+      h('div', {
+        style: { fontSize: '14px', lineHeight: '22px', color: 'var(--dsw-alias-label-primary)' },
+      }, tr('settings.title')),
+      h('div', {
+        style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary)' },
+      }, tr('settings.description'))),
+      h('div', {
+        style: { display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' },
+      },
+      toggle(tr('settings.autoSuggest'), current.autoSuggest, value => settings.set({ ...current, autoSuggest: value })),
+      toggle(tr('settings.showBars'), current.showBars, value => settings.set({ ...current, showBars: value }))))
+    }
+
     function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'session-unread: dictionaries')
 
@@ -354,6 +457,7 @@ window.__ModuleLoader__.load({
        * never reads conversation content and never applies itself.
        */
       const suggestFor = (sessionId) => {
+        if (settings.getSnapshot().autoSuggest === false) return null
         if (isArchived(sessionId)) return null
         const row = ctx.sessions.list.getSnapshot().byId[sessionId]
         if (row === undefined || row.blank === true) return null
@@ -423,6 +527,7 @@ window.__ModuleLoader__.load({
         const onStorage = (event) => {
           if (event.key === UNREAD_KEY) unread.refresh()
           if (event.key === TRIAGE_KEY) triage.refresh()
+          if (event.key === SETTINGS_KEY) settings.refresh()
         }
         window.addEventListener('storage', onStorage)
         return () => { window.removeEventListener('storage', onStorage) }
@@ -435,6 +540,10 @@ window.__ModuleLoader__.load({
         styleEl.dataset.pluginCss = 'triage.css'
         document.head.appendChild(styleEl)
         const renderBars = () => {
+          if (settings.getSnapshot().showBars === false) {
+            styleEl.textContent = ''
+            return
+          }
           const archived = new Set(ctx.workspaces.list.getSnapshot().archivedSessionIds)
           const rules = []
           for (const [id, entry] of Object.entries(triage.getSnapshot())) {
@@ -446,10 +555,12 @@ window.__ModuleLoader__.load({
         ctx.effect(() => {
           const disposeTriage = triage.subscribe(renderBars)
           const disposeWorkspaces = ctx.workspaces.list.subscribe(renderBars)
+          const disposeSettings = settings.subscribe(renderBars)
           renderBars()
           return () => {
             disposeTriage()
             disposeWorkspaces()
+            disposeSettings()
             styleEl.remove()
           }
         }, 'session-unread: triage bars')
@@ -581,11 +692,136 @@ window.__ModuleLoader__.load({
         }, SessionStateHover)
         return () => { unregister() }
       })
+      /* Settings -> General row: plugin preferences only. Shortcut keys are
+         edited in the shared Keyboard shortcuts editor below. */
+      ctx.slots.inject('settings.general.item', () => {
+        const unregister = ctx.slots.register({
+          name: 'settings.general.item',
+          id: 'session-unread-settings',
+          order: 17,
+          locale: NS,
+        }, SessionMarkSettings)
+        return () => { unregister() }
+      })
+
+      /* Two app commands; both appear in Settings -> Keyboard shortcuts and
+         are rebindable there. Web Linux only admits Mod+Shift+, / Mod+Shift+.,
+         so those are the defaults; a conflict leaves the command unbound
+         instead of failing plugin activation. */
+      const defaultsFor = (binding) => {
+        if (binding === null) return {}
+        const entries = {}
+        for (const profile of PROFILES) entries[profile] = binding
+        return entries
+      }
+      const bindingAllowed = (binding) => {
+        try {
+          const described = ctx.shortcuts.describeBinding(binding)
+          return described.issue === null && described.conflicts.length === 0
+        } catch (_error) {
+          return false
+        }
+      }
+      const nextUnreadBinding = bindingAllowed({ code: 'Comma', modifiers: ['primary', 'shift'] })
+        ? { code: 'Comma', modifiers: ['primary', 'shift'] }
+        : null
+      const cycleTriageBinding = bindingAllowed({ code: 'Period', modifiers: ['primary', 'shift'] })
+        ? { code: 'Period', modifiers: ['primary', 'shift'] }
+        : null
+      const registerShortcut = (command) => {
+        try {
+          return ctx.shortcuts.register(command)
+        } catch (_error) {
+          try {
+            return ctx.shortcuts.register({ ...command, defaults: {} })
+          } catch (_ignored) {
+            return () => {}
+          }
+        }
+      }
+      ctx.effect(() => {
+        const disposers = [
+          registerShortcut({
+            id: 'session-unread.next',
+            label: () => translate()('shortcut.nextUnread'),
+            aliases: ['next unread', 'unread', '下一个未读'],
+            defaults: defaultsFor(nextUnreadBinding),
+            regions: ['page', 'editable'],
+            modals: [],
+            resolve: () => {
+              const list = ctx.sessions.list.getSnapshot()
+              const current = currentSessionId(list)
+              const candidates = list.ids.filter(id =>
+                id !== current && unread.has(id) && !isArchived(id))
+              if (candidates.length === 0) return { status: 'blocked', reason: 'no-unread' }
+              let next = candidates[0]
+              if (current !== undefined) {
+                const index = list.ids.indexOf(current)
+                if (index >= 0) {
+                  for (let step = 1; step <= list.ids.length; step += 1) {
+                    const id = list.ids[(index + step) % list.ids.length]
+                    if (id !== current && unread.has(id) && !isArchived(id)) {
+                      next = id
+                      break
+                    }
+                  }
+                }
+              }
+              return {
+                status: 'handled',
+                run: () => {
+                  void Promise.resolve(ctx.uiWorkspace.openSession(next)).catch(() => {})
+                },
+              }
+            },
+          }),
+          registerShortcut({
+            id: 'session-triage.cycle',
+            label: () => translate()('shortcut.cycleTriage'),
+            aliases: ['triage', 'cycle triage', '循环处理状态'],
+            defaults: defaultsFor(cycleTriageBinding),
+            regions: ['page', 'editable'],
+            modals: [],
+            resolve: () => {
+              const list = ctx.sessions.list.getSnapshot()
+              const current = currentSessionId(list)
+              if (current === undefined || isArchived(current)) {
+                return { status: 'blocked', reason: 'no-current' }
+              }
+              const entry = triage.get(current)
+              const next = entry === undefined
+                ? 'red'
+                : entry.level === 'red'
+                  ? 'amber'
+                  : entry.level === 'amber'
+                    ? 'green'
+                    : null
+              return {
+                status: 'handled',
+                run: () => {
+                  const t = translate()
+                  if (next === null) triage.remove(current)
+                  else {
+                    triage.set(current, {
+                      level: next,
+                      reason: t('reason.manual'),
+                      source: 'manual',
+                      updatedAt: Date.now(),
+                    })
+                  }
+                },
+              }
+            },
+          }),
+        ]
+        return () => { for (const dispose of disposers) dispose() }
+      }, 'session-unread: shortcuts')
+
     }
 
     return {
       name: 'dsh-session-unread',
-      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession'],
+      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace'],
       apply,
     }
   },

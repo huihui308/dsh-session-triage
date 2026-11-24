@@ -1,8 +1,8 @@
 {
   "name": "dsh-session-unread",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "会话右键未读标记 + 红黄绿处理状态：行首绿点、左侧色条、刷新仍在、点开清除，标题启发式建议。",
+  "description": "会话右键未读标记 + 红黄绿处理状态：设置页开关、键盘快捷键、行首绿点/左侧色条。",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -28,7 +28,9 @@
       "inject": [
         "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-shortcuts",
         "@deepseek-ai/dsh-client-ui-context-menu",
+        "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
