@@ -20,6 +20,8 @@ DSH 侧栏的绿点（`StateDot state="done"`）来自 `UiSession.completionUnre
 
 标记后行首重新出现绿点：
 
+![行首绿点](docs/row-dot.png)
+
 ![侧栏绿点](docs/sidebar.png)
 
 右键菜单里多一项（已标记时变为「取消未读标记」）：
