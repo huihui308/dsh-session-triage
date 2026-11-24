@@ -72,6 +72,14 @@ ln -s /mnt/sdb1/agent/dsh-session-unread node_modules/dsh-session-unread
 `dsh-session-unread` 追加到 `dsh.profile.bundles` 数组末尾，最后让宿主
 重新加载配置（有 HMR 时改 bundles 列表即可，没有则重启）。
 
+## 边界
+
+- 标记是**浏览器本地**的：换浏览器、换设备、清空站点数据后不会带过去；
+  会话本身完全不受影响。
+- 标记**不会改变会话排序**。会话仍按最近更新排；如果它被折叠在「显示更多」
+  后面，需要先展开列表（或直接搜索标题）。
+- 已归档会话的行首本来就不显示状态点，因此归档行不提供这个菜单项。
+
 ## 存储
 
 - key：`localStorage["dsh.session-unread.v1"]`
