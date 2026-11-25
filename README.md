@@ -4,7 +4,7 @@
 
 > DSH Web 的会话看板：给会话加未读和红 / 黄 / 绿处理状态，再用一个跨工作区总览页把待处理会话收拢。
 
-![Version](https://img.shields.io/badge/version-0.7.0-4c6fff)
+![Version](https://img.shields.io/badge/version-0.8.0-4c6fff)
 ![License](https://img.shields.io/badge/license-MIT-30a46c)
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
@@ -83,6 +83,14 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 - **快捷点**：行内悬停出现红 / 黄 / 绿快捷点，点一下写入状态，再点同色清除；点行才打开会话，在板上浏览不会打断当前会话。
 - **入口**：侧栏入口可 Pin，也可以像其他面板一样收进 More；键盘用 `Ctrl+Alt+L`（macOS `Cmd+Alt+L`）打开，再按一次回到打开前的面板或会话。
 
+### 定时任务（看板内）
+
+- **筛选条里的「定时任务」**：点开后列表从会话换成任务视图 —— 下次运行时间、目标会话、开启 / 暂停 / 已结束。
+- **行内操作**：暂停 / 恢复、立即执行、编辑 ↗（打开官方 Automation tasks 面板）、删除（点两次确认，4 秒后自动复原）。
+- **会话行上的 ⏱**：该会话是某个任务的目标时，行内显示最近一条的下次运行；悬停看这个会话挂的所有任务。
+- **已结束**的任务跟着「显示已闭环」一起隐藏；指令全文不看板展开，去官方面板改。
+- 数据走 `ctx.remote.schedule`（`catalog` / `edit` / `run`），监听 `schedule/changed` 自动刷新；写操作带 `expectedUpdatedAt`，冲突只提示不改数据。
+
 ### 状态持久化与运行中断
 
 - **状态存在服务端**：未读标记、红 / 黄 / 绿处理状态、运行快照都写到 `$DSH_HOME/session-triage/state.json`（host 半片提供 `/session-triage/state` 读写），浏览器 localStorage 只作缓存。重启 dsh web、http ↔ https 切换、换 IP / 主机名访问都不丢。
@@ -131,10 +139,10 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 生产使用建议固定到 release tag，避免 master 后续推送改变安装内容：
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.7.0"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.8.0"
 ```
 
-也可以把 `v0.7.0` 换成完整或短 commit SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
+也可以把 `v0.8.0` 换成完整或短 commit SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
 
 ### 升级
 

@@ -717,7 +717,7 @@ window.__ModuleLoader__.load({
 .dsu-dot.recent { background: var(--dsw-alias-label-tertiary); }
 .dsu-dot.interrupted { background: transparent; box-shadow: inset 0 0 0 2px var(--dsw-alias-state-warn-primary, #f5a623); }
 .dsu-dot.schedule { background: transparent; box-shadow: inset 0 0 0 2px var(--dsw-alias-state-business-primary, #4c6fff); }
-.dsu-task-time { flex: none; width: 62px; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.dsu-task-time { flex: none; min-width: 76px; white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--dsw-alias-label-secondary); }
 .dsu-task { align-items: center; }
 .dsu-task .dsu-row-main { flex: 1; min-width: 0; }
 .dsu-task-actions { opacity: 1; gap: 6px; }

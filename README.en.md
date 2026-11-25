@@ -4,7 +4,7 @@
 
 > A session board for DSH Web: unread marks, red / amber / green processing status, and one cross-workspace overview.
 
-![Version](https://img.shields.io/badge/version-0.7.0-4c6fff)
+![Version](https://img.shields.io/badge/version-0.8.0-4c6fff)
 ![License](https://img.shields.io/badge/license-MIT-30a46c)
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
@@ -83,6 +83,14 @@ The board collects sessions across workspaces on one page:
 - **Quick dots**: hover a row to reveal red / amber / green dots. Click to set, click the same color again to clear. Click the row itself to open the session; browsing the board does not interrupt the current session.
 - **Entry**: the sidebar entry can be pinned, or tucked under **More** like other panels. From the keyboard, `Ctrl+Alt+L` (macOS `Cmd+Alt+L`) opens the board; press it again to return to the panel or session you came from.
 
+### Scheduled tasks on the board
+
+- **The Scheduled chip** in the filter row swaps the list for host tasks: next run, target session, active / paused / ended.
+- **Row actions**: pause / resume, run now, edit ↗ (opens the official Automation tasks panel), delete (a second click confirms; reverts after four seconds).
+- **⏱ on a session row**: shown when a task targets that session, with the nearest next run; hover lists every task attached to it.
+- **Ended** tasks follow the **Show settled** toggle. Prompts are not expanded here — edit them in the official panel.
+- Data goes through `ctx.remote.schedule` (`catalog` / `edit` / `run`) and follows `schedule/changed`; writes carry `expectedUpdatedAt` and only report conflicts.
+
 ### Persistence and interrupted runs
 
 - **State lives on the host**: unread marks, red / amber / green status, and the last-seen running set are written to `$DSH_HOME/session-triage/state.json` through `/session-triage/state` (host half). localStorage is only a cache. A dsh web restart, an http ↔ https switch, or a different IP / hostname no longer wipes them.
@@ -131,10 +139,10 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 For production, pin a release tag so a later push to master cannot change what is installed:
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.7.0"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.8.0"
 ```
 
-You can also replace `v0.7.0` with a full or short commit SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
+You can also replace `v0.8.0` with a full or short commit SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
 
 ### Upgrade
 
