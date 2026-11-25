@@ -1996,7 +1996,7 @@ window.__ModuleLoader__.load({
 
     return {
       name: 'dsh-session-triage',
-      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace', 'layout', 'remote'],
+      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace', 'layout', 'remote', 'remote.schedule'],
       apply,
     }
   },
