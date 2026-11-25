@@ -66,15 +66,29 @@ window.__ModuleLoader__.load({
       'reason.manual': '手动',
       'reason.generic': '状态提示',
       'settings.title': '会话标记',
-      'settings.description': '未读绿点、处理状态色条；快捷键在「键盘快捷键」里修改。',
+      'settings.description': '未读绿点、处理状态色条；看板快捷键也可以在看板页面上改。',
       'settings.autoSuggest': '自动建议处理状态',
       'settings.showBars': '显示处理状态色条',
-      'settings.shortcut': '看板快捷键：{keys} · 在「键盘快捷键」里改',
-      'settings.shortcut.unbound': '看板快捷键：未绑定 · 在「键盘快捷键」里录一个',
+      'settings.shortcut': '看板快捷键：{keys} · 也可在看板页面修改',
+      'settings.shortcut.unbound': '看板快捷键：未绑定 · 到看板页面录一个',
       'shortcut.nextUnread': '下一个未读会话',
       'shortcut.cycleTriage': '循环当前会话处理状态',
       'shortcut.board': '打开 / 返回会话看板',
       'board.title': '会话看板',
+      'board.shortcut': '看板快捷键',
+      'board.shortcut.edit': '修改',
+      'board.shortcut.hint': '点录制后直接按新的组合键；Esc 取消。',
+      'board.shortcut.current': '当前：{keys}',
+      'board.shortcut.unbound': '当前未绑定',
+      'board.shortcut.record': '录制新快捷键',
+      'board.shortcut.recording': '请按新的组合键…',
+      'board.shortcut.reset': '恢复默认',
+      'board.shortcut.cancel': '取消',
+      'board.shortcut.saved': '快捷键已更新',
+      'board.shortcut.needKey': '请按一个带修饰键的组合，例如 Ctrl+Alt+P',
+      'board.shortcut.invalid': '这个组合不可用：{reason}',
+      'board.shortcut.conflict': '已被其他命令占用：{conflicts}',
+      'board.shortcut.failed': '保存失败，请重试',
       'board.active': '未闭环 {n}',
       'board.all': '全部',
       'board.running': '运行中',
@@ -157,15 +171,29 @@ window.__ModuleLoader__.load({
       'reason.manual': 'manual',
       'reason.generic': 'status hint',
       'settings.title': 'Session marks',
-      'settings.description': 'Unread dot and triage bar. Shortcuts are edited under Keyboard shortcuts.',
+      'settings.description': 'Unread dot and triage bar. The board shortcut can also be changed on the board page.',
       'settings.autoSuggest': 'Suggest triage status',
       'settings.showBars': 'Show triage bar',
-      'settings.shortcut': 'Board shortcut: {keys} · change it under Keyboard shortcuts',
-      'settings.shortcut.unbound': 'Board shortcut: not bound · record one under Keyboard shortcuts',
+      'settings.shortcut': 'Board shortcut: {keys} · change it on the board page',
+      'settings.shortcut.unbound': 'Board shortcut: not bound · record one on the board page',
       'shortcut.nextUnread': 'Next unread session',
       'shortcut.cycleTriage': 'Cycle current session triage',
       'shortcut.board': 'Open / leave the session board',
       'board.title': 'Session board',
+      'board.shortcut': 'Board shortcut',
+      'board.shortcut.edit': 'Change',
+      'board.shortcut.hint': 'Click record, then press the new combination; Esc cancels.',
+      'board.shortcut.current': 'Current: {keys}',
+      'board.shortcut.unbound': 'Not bound',
+      'board.shortcut.record': 'Record shortcut',
+      'board.shortcut.recording': 'Press the new combination…',
+      'board.shortcut.reset': 'Reset to default',
+      'board.shortcut.cancel': 'Cancel',
+      'board.shortcut.saved': 'Shortcut updated',
+      'board.shortcut.needKey': 'Press a combination with a modifier, such as Ctrl+Alt+P',
+      'board.shortcut.invalid': 'This combination is not available: {reason}',
+      'board.shortcut.conflict': 'Already used by: {conflicts}',
+      'board.shortcut.failed': 'Could not save; try again',
       'board.active': '{n} open',
       'board.all': 'All',
       'board.running': 'Running',
@@ -742,6 +770,24 @@ window.__ModuleLoader__.load({
 .dsu-toggle[aria-pressed="true"] .dsu-check { background: var(--dsw-alias-state-business-primary, #4c6fff); border-color: var(--dsw-alias-state-business-primary, #4c6fff); }
 .dsu-link { border: 0; background: transparent; color: var(--dsw-alias-state-business-primary, #4c6fff); font: inherit; font-size: 13px; cursor: pointer; padding: 0 2px; }
 .dsu-link:hover { text-decoration: underline; }
+.dsu-head-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.dsu-shortcut-trigger { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 8px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.dsu-shortcut-trigger:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
+.dsu-shortcut-trigger kbd { min-width: 22px; padding: 2px 5px; border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.18)); border-bottom-width: 2px; border-radius: 5px; background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04)); color: var(--dsw-alias-label-primary); font: 11px/16px ui-monospace, monospace; text-align: center; }
+.dsu-shortcut-panel { margin: 0 0 20px; padding: 18px 20px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1)); border-radius: 12px; background: var(--dsw-alias-bg-layer-1, #fff); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06); }
+.dsu-shortcut-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.dsu-shortcut-title { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.dsu-shortcut-hint { margin-top: 4px; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
+.dsu-shortcut-keys { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; color: var(--dsw-alias-label-primary); font-size: 13px; }
+.dsu-shortcut-keys kbd { min-width: 28px; padding: 4px 7px; border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.18)); border-bottom-width: 2px; border-radius: 6px; background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04)); font: 12px/16px ui-monospace, monospace; text-align: center; }
+.dsu-shortcut-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+.dsu-shortcut-btn { font: inherit; font-size: 12px; height: 30px; padding: 0 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 7px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.dsu-shortcut-btn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
+.dsu-shortcut-btn.primary { color: var(--dsw-alias-label-inverse, #fff); background: var(--dsw-alias-state-business-primary, #4c6fff); border-color: var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-shortcut-btn:disabled { opacity: .5; cursor: default; }
+.dsu-shortcut-notice { margin-top: 12px; font-size: 12px; line-height: 18px; color: var(--dsw-alias-state-success-primary, #30a46c); }
+.dsu-shortcut-error { margin-top: 12px; font-size: 12px; line-height: 18px; color: var(--dsw-alias-state-error-primary, #e5484d); }
+@media (max-width: 720px) { .dsu-shortcut-row { flex-direction: column; } .dsu-shortcut-actions { width: 100%; } }
 .dsu-group { margin-top: 24px; }
 .dsu-group-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 6px; }
 .dsu-group-name { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; color: var(--dsw-alias-label-tertiary); }
@@ -1401,7 +1447,7 @@ window.__ModuleLoader__.load({
          spends its three slots (Mod+/, Mod+Shift+, Mod+Shift+.) on core and
          earlier plugin commands, so the default is declared for Desktop and
          Windows/macOS Web only — Linux Web keeps the command, unbound. */
-      const boardBinding = { code: 'KeyL', modifiers: ['primary', 'alt'] }
+      const boardBinding = { code: 'KeyP', modifiers: ['primary', 'alt'] }
       const boardDefaults = {
         'desktop:macos': boardBinding,
         'desktop:windows': boardBinding,
@@ -1558,12 +1604,123 @@ window.__ModuleLoader__.load({
         const [groupFilter, setGroupFilter] = React.useState('all')
         const [showClosed, setShowClosed] = React.useState(false)
         const [now, setNow] = React.useState(() => Date.now())
+        const shortcutCatalog = useObservable(ctx.shortcuts.catalog)
+        const [shortcutOpen, setShortcutOpen] = React.useState(false)
+        const [shortcutRecording, setShortcutRecording] = React.useState(false)
+        const [shortcutNotice, setShortcutNotice] = React.useState('')
+        const [shortcutError, setShortcutError] = React.useState('')
+        const boardShortcutEntry = Array.isArray(shortcutCatalog)
+          ? shortcutCatalog.find(entry => entry.id === 'session-triage.board')
+          : undefined
+        const boardKeys = boardShortcutEntry !== undefined && Array.isArray(boardShortcutEntry.keys)
+          ? boardShortcutEntry.keys.join('+')
+          : ''
 
         React.useEffect(() => {
           const timer = window.setInterval(() => setNow(Date.now()), 60 * 1000)
           return () => { window.clearInterval(timer) }
         }, [])
         React.useEffect(() => { markBoardReload() }, [])
+
+        const openShortcutEditor = () => {
+          setShortcutNotice('')
+          setShortcutError('')
+          setShortcutOpen(true)
+        }
+        const closeShortcutEditor = () => {
+          setShortcutRecording(false)
+          setShortcutOpen(false)
+          setShortcutError('')
+        }
+        const saveShortcut = async (binding) => {
+          let description
+          try {
+            description = ctx.shortcuts.describeBinding(binding)
+          } catch (error) {
+            setShortcutError(tr('board.shortcut.invalid', { reason: String(error && error.message ? error.message : error) }))
+            return
+          }
+          if (description.issue !== null && description.issue !== undefined) {
+            setShortcutError(tr('board.shortcut.invalid', { reason: String(description.issue) }))
+            return
+          }
+          const conflicts = (Array.isArray(description.conflicts) ? description.conflicts : [])
+            .filter(id => id !== 'session-triage.board')
+          if (conflicts.length > 0) {
+            setShortcutError(tr('board.shortcut.conflict', { conflicts: conflicts.join(', ') }))
+            return
+          }
+          try {
+            const snapshot = ctx.shortcuts.config.getSnapshot()
+            const result = await ctx.shortcuts.edit(
+              { type: 'set', id: 'session-triage.board', binding },
+              snapshot.revision,
+            )
+            if (result.status === 'saved') {
+              setShortcutRecording(false)
+              setShortcutNotice(tr('board.shortcut.saved'))
+              setShortcutError('')
+              return
+            }
+            const remaining = Array.isArray(result.conflicts)
+              ? result.conflicts.filter(id => id !== 'session-triage.board')
+              : []
+            if (result.issue !== undefined) {
+              setShortcutError(tr('board.shortcut.invalid', { reason: String(result.issue) }))
+            } else if (remaining.length > 0) {
+              setShortcutError(tr('board.shortcut.conflict', { conflicts: remaining.join(', ') }))
+            } else {
+              setShortcutError(tr('board.shortcut.failed'))
+            }
+          } catch (_error) {
+            setShortcutError(tr('board.shortcut.failed'))
+          }
+        }
+        const resetShortcut = async () => {
+          setShortcutNotice('')
+          setShortcutError('')
+          try {
+            const snapshot = ctx.shortcuts.config.getSnapshot()
+            const result = await ctx.shortcuts.edit(
+              { type: 'reset', id: 'session-triage.board' },
+              snapshot.revision,
+            )
+            if (result.status === 'saved') {
+              setShortcutRecording(false)
+              setShortcutNotice(tr('board.shortcut.saved'))
+            } else {
+              setShortcutError(tr('board.shortcut.failed'))
+            }
+          } catch (_error) {
+            setShortcutError(tr('board.shortcut.failed'))
+          }
+        }
+        React.useEffect(() => {
+          if (!shortcutRecording) return undefined
+          const handler = (event) => {
+            if (event.repeat) return
+            event.preventDefault()
+            event.stopPropagation()
+            if (event.key === 'Escape') {
+              setShortcutRecording(false)
+              setShortcutError('')
+              return
+            }
+            if (event.code === '' || /^(Control|Alt|Shift|Meta)(Left|Right)$/.test(event.code)) return
+            const modifiers = []
+            if (event.ctrlKey) modifiers.push('control')
+            if (event.altKey) modifiers.push('alt')
+            if (event.shiftKey) modifiers.push('shift')
+            if (event.metaKey) modifiers.push('meta')
+            if (modifiers.length === 0) {
+              setShortcutError(tr('board.shortcut.needKey'))
+              return
+            }
+            void saveShortcut({ code: event.code, modifiers })
+          }
+          window.addEventListener('keydown', handler, true)
+          return () => window.removeEventListener('keydown', handler, true)
+        }, [shortcutRecording])
 
         const workspaceRows = React.useMemo(() => {
           const bySession = new Map()
@@ -1885,7 +2042,19 @@ window.__ModuleLoader__.load({
               h('div', null,
                 h('h1', { className: 'dsu-title' }, tr('board.title')),
                 h('div', { className: 'dsu-sub' }, tr('board.active', { n: activeCount }))),
-              hasFilters ? h('button', { type: 'button', className: 'dsu-link', onClick: clearFilters }, tr('board.clearFilters')) : null),
+              h('div', { className: 'dsu-head-actions' },
+                h('button', {
+                  type: 'button',
+                  className: 'dsu-shortcut-trigger',
+                  'aria-label': tr('board.shortcut') + ': ' + (boardKeys === '' ? tr('board.shortcut.unbound') : boardKeys),
+                  title: tr('board.shortcut.edit'),
+                  onClick: openShortcutEditor,
+                },
+                boardKeys === ''
+                  ? h('span', null, tr('board.shortcut.unbound'))
+                  : boardKeys.split('+').map(key => h('kbd', { key }, key)),
+                h('span', null, tr('board.shortcut.edit'))),
+                hasFilters ? h('button', { type: 'button', className: 'dsu-link', onClick: clearFilters }, tr('board.clearFilters')) : null)),
             h('div', { className: 'dsu-chips' },
               chip('all', tr('board.all'), activeCount, null),
               chip('running', tr('board.running'), counts.running, 'running'),
@@ -1922,6 +2091,38 @@ window.__ModuleLoader__.load({
               },
               h('span', { className: 'dsu-check', 'aria-hidden': 'true' }, showClosed ? '✓' : ''),
               h('span', null, tr('board.showClosed') + (showClosed ? ' (' + counts.closed + ')' : '')))),
+            shortcutOpen ? h('div', { className: 'dsu-shortcut-panel' },
+              h('div', { className: 'dsu-shortcut-row' },
+                h('div', null,
+                  h('div', { className: 'dsu-shortcut-title' }, tr('board.shortcut')),
+                  h('div', { className: 'dsu-shortcut-keys' },
+                    boardKeys === ''
+                      ? tr('board.shortcut.unbound')
+                      : boardKeys.split('+').map(key => h('kbd', { key }, key))),
+                  h('div', { className: 'dsu-shortcut-hint' }, tr('board.shortcut.hint'))),
+                h('div', { className: 'dsu-shortcut-actions' },
+                  h('button', {
+                    type: 'button',
+                    className: 'dsu-shortcut-btn primary',
+                    onClick: () => {
+                      setShortcutNotice('')
+                      setShortcutError('')
+                      setShortcutRecording(value => !value)
+                    },
+                  }, shortcutRecording ? tr('board.shortcut.recording') : tr('board.shortcut.record')),
+                  h('button', {
+                    type: 'button',
+                    className: 'dsu-shortcut-btn',
+                    onClick: () => { void resetShortcut() },
+                  }, tr('board.shortcut.reset')),
+                  h('button', {
+                    type: 'button',
+                    className: 'dsu-shortcut-btn',
+                    onClick: closeShortcutEditor,
+                  }, tr('board.shortcut.cancel')))),
+              shortcutError === '' ? null : h('div', { className: 'dsu-shortcut-error' }, shortcutError),
+              shortcutNotice === '' ? null : h('div', { className: 'dsu-shortcut-notice' }, shortcutNotice))
+            : null,
             groupFilter === 'schedule'
               ? h('div', { className: 'dsu-sched-list' },
                 scheduleState.notice === '' ? null : h('div', { className: 'dsu-sched-notice' }, scheduleState.notice),

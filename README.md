@@ -81,7 +81,7 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 - **口径**：排除归档、空白 New Session、子会话；绿色默认隐藏。同一会话只进一个组：红 / 等你响应优先，其次黄；运行中如果没显式红 / 黄就进运行中；未读不会把运行中的会话挪走；绿色最后。
 - **筛选**：搜索标题 / 工作区，按分组 chip 或工作区过滤；顶部计数随筛选更新。
 - **快捷点**：行内悬停出现红 / 黄 / 绿快捷点，点一下写入状态，再点同色清除；点行才打开会话，在板上浏览不会打断当前会话。
-- **入口**：侧栏入口可 Pin，也可以像其他面板一样收进 More；键盘用 `Ctrl+Alt+L`（macOS `Cmd+Alt+L`）打开，再按一次回到打开前的面板或会话。
+- **入口**：侧栏入口可 Pin，也可以像其他面板一样收进 More；键盘用 `Ctrl+Alt+P`（macOS `Cmd+Alt+P`）打开，再按一次回到打开前的面板或会话；也可以在看板右上角 `Change` / 「修改」里直接改。
 
 ### 定时任务（看板内）
 
@@ -112,7 +112,7 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 |---|---|---|
 | 下一个未读会话 | `Ctrl+Shift+,`（macOS `Cmd+Shift+,`） | 跳到下一个有未读标记的会话并打开；只有当前会话有标记时不动 |
 | 循环当前会话处理状态 | `Ctrl+Shift+.`（macOS `Cmd+Shift+.`） | 无 → 红 → 黄 → 绿 → 无 |
-| 打开 / 返回会话看板 | `Ctrl+Alt+L`（macOS `Cmd+Alt+L`） | 打开会话看板并聚焦搜索框；再按一次回到打开前的面板 / 会话 |
+| 打开 / 返回会话看板 | `Ctrl+Alt+P`（macOS `Cmd+Alt+P`） | 打开会话看板并聚焦搜索框；再按一次回到打开前的面板 / 会话；看板右上角可直接改 |
 
 - Linux 浏览器的 Web 端 DSH 只接受三个组合（`Mod+/`、`Mod+Shift+,`、`Mod+Shift+.`），都已被占用，所以看板快捷键在 Linux 浏览器里是空的（命令仍在列表，但录不进去）。Windows / macOS 浏览器还接受 `Mod+Alt+字母`，看板默认走这个位子。
 - 前两个命令用 `Mod+Shift+标点`：`Mod+/` 已被「打开键盘快捷键」占用。
