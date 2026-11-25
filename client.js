@@ -1587,25 +1587,48 @@ window.__ModuleLoader__.load({
         } catch (_error) {
           return () => {}
         }
-        let migrated = false
+        let done = false
+        let running = false
+        let attempts = 0
         const migrate = () => {
-          if (migrated) return
+          if (done || running) return
           const rows = ctx.shortcuts.catalog.getSnapshot()
           const row = Array.isArray(rows)
             ? rows.find(item => item.id === 'session-triage.board')
             : undefined
           if (row === undefined || row.binding === null || row.binding.code !== 'KeyL') return
+          if (attempts >= 4) return
           try {
             const snapshot = ctx.shortcuts.config.getSnapshot()
             if (snapshot.status !== 'ready') return
-            migrated = true
-            window.localStorage.setItem(key, '1')
-            void ctx.shortcuts.edit({ type: 'reset', id: 'session-triage.board' }, snapshot.revision)
-          } catch (_error) { /* leave the old binding in place */ }
+            running = true
+            attempts += 1
+            let revision = snapshot.revision
+            const run = () => {
+              void ctx.shortcuts.edit({ type: 'reset', id: 'session-triage.board' }, revision)
+                .then(result => {
+                  if (result.status === 'saved') {
+                    done = true
+                    running = false
+                    try { window.localStorage.setItem(key, '1') } catch (_error) { /* storage unavailable */ }
+                    return
+                  }
+                  if (result.status === 'stale' && attempts < 4) {
+                    revision = result.snapshot.revision
+                    run()
+                    return
+                  }
+                  running = false
+                })
+                .catch(() => { running = false })
+            }
+            run()
+          } catch (_error) { running = false }
         }
-        const dispose = ctx.shortcuts.catalog.subscribe(migrate)
+        const disposeCatalog = ctx.shortcuts.catalog.subscribe(migrate)
+        const disposeConfig = ctx.shortcuts.config.subscribe(migrate)
         migrate()
-        return dispose
+        return () => { disposeCatalog(); disposeConfig() }
       }, 'session-triage: migrate legacy board shortcut')
 
       /* Board CSS is injected once; rows reuse the app's theme tokens. */
