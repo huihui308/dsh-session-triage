@@ -9,6 +9,8 @@
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
 
+![Session board demo](docs/demo.gif)
+
 DSH's built-in green dot comes from `UiSession.completionUnread`: it appears when a session finishes in the background, disappears as soon as you open the session, and there is no way to restore it. With sessions spread across workspaces, finding the ones that still need attention means scrolling the sidebar.
 
 This plugin adds three things:
@@ -33,7 +35,7 @@ The hover card explains both unread and status:
 
 ![Hover card](docs/hover-card.png)
 
-> Screenshots use the English UI; labels follow DSH's interface language.
+> The animated demo uses the Chinese UI; the still screenshots below use the English UI. Labels follow DSH's interface language.
 
 ## Quick start
 
@@ -121,13 +123,13 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 
 `web` is the default profile; replace it with your own. The package is plain JavaScript with no build or `prepare` step. `dsh plugin add` appends `dsh-session-triage` to the profile's `dsh.profile.bundles`.
 
-For production, pin a commit so a later push to master cannot change what is installed:
+For production, pin a release tag so a later push to master cannot change what is installed:
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#<commit>"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.5.3"
 ```
 
-Replace `<commit>` with a full or short SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
+You can also replace `v0.5.3` with a full or short commit SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
 
 ### Upgrade
 
