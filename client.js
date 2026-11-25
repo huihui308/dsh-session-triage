@@ -918,12 +918,15 @@ window.__ModuleLoader__.load({
       /* --- host schedule catalog ------------------------------------------- */
       const scheduleRemote = () => {
         try {
+          if (ctx.remote?.schedule !== undefined) return ctx.remote.schedule
+        } catch (_error) { /* remote not injected */ }
+        try {
           if (typeof ctx.get === 'function') {
             const remote = ctx.get('remote')
             if (remote !== undefined && remote !== null && remote.schedule !== undefined) return remote.schedule
           }
         } catch (_error) { /* remote service not mounted */ }
-        try { return ctx.remote?.schedule } catch (_error) { return undefined }
+        return undefined
       }
 
       const refreshSchedules = async () => {
@@ -1993,7 +1996,7 @@ window.__ModuleLoader__.load({
 
     return {
       name: 'dsh-session-triage',
-      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace', 'layout'],
+      inject: ['slots', 'locale', 'sessions', 'contextMenus', 'workspaces', 'uiSession', 'shortcuts', 'uiWorkspace', 'layout', 'remote'],
       apply,
     }
   },
