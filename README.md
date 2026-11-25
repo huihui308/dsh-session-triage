@@ -117,6 +117,7 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 - Linux 浏览器的 Web 端 DSH 只接受三个组合（`Mod+/`、`Mod+Shift+,`、`Mod+Shift+.`），都已被占用，所以看板快捷键在 Linux 浏览器里是空的（命令仍在列表，但录不进去）。Windows / macOS 浏览器还接受 `Mod+Alt+字母`，看板默认走这个位子。
 - 前两个命令用 `Mod+Shift+标点`：`Mod+/` 已被「打开键盘快捷键」占用。
 - 系统级热键（截图工具、输入法、录屏）优先于浏览器，撞键时 DSH 收不到：在「编辑快捷键」里点这条命令，直接按新组合改绑即可。
+- 看板的「定时任务」区块依赖 Automation tasks 的客户端服务（`remote.schedule`）；该 bundle 被禁用时本插件不会加载，先把它开回来。
 - 快捷键在输入框 / 编辑器聚焦时也生效（`regions: ['page', 'editable']`），因为都是带修饰键的标点组合，不会挡正常输入。
 - 如果默认键在某平台冲突，插件会把这个命令留空（仍出现在快捷键列表里，手动录一个即可），不会让插件加载失败。
 

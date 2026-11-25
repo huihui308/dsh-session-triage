@@ -117,6 +117,7 @@ Edit shortcuts under **Settings → General → Keyboard shortcuts → Edit shor
 - On Linux browsers DSH Web accepts only three combinations (`Mod+/`, `Mod+Shift+,`, `Mod+Shift+.`), all already taken, so the board shortcut stays unbound there (the command is listed but cannot be recorded). Windows / macOS browsers also accept `Mod+Alt+letter`, which is what the board uses.
 - The first two commands use `Mod+Shift+punctuation`; `Mod+/` is already used by **Open keyboard shortcuts**.
 - OS-level hotkeys (screenshot tools, input methods, screen recorders) win over the browser, so a colliding key never reaches DSH. Rebind it in **Edit shortcuts** by clicking the command and pressing a new combination.
+- The **Scheduled** view depends on the Automation tasks client service (`remote.schedule`); disabling that bundle prevents this plugin from loading.
 - Shortcuts also work while an input or editor is focused (`regions: ['page', 'editable']`); they are modified punctuation combinations and do not block normal typing.
 - If a default conflicts on a platform, the command is left unbound (it still appears in the shortcut list; record a new combination).
 
