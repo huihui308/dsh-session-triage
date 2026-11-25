@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-triage",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "description": "DSH Web 会话看板：未读标记、红黄绿处理状态、跨工作区总览，支持可改键快捷键。",
   "keywords": [
@@ -30,6 +30,7 @@
   },
   "files": [
     "index.js",
+    "host.js",
     "client.js",
     "cordis.patch.yml",
     "README.md",

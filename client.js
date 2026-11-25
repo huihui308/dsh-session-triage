@@ -18,6 +18,9 @@
  * A client-side heuristic may suggest a level from title keywords and live
  * session status. Suggestions are never auto-applied: they appear in the menu
  * and the hover card, and adopting one is an explicit click.
+ *
+ * Board state (unread / triage / last-seen running / interrupted) is mirrored
+ * to the host half so a dsh web restart or an http/https switch keeps it.
  */
 
 window.__ModuleLoader__.load({
@@ -31,6 +34,9 @@ window.__ModuleLoader__.load({
     const UNREAD_KEY = 'dsh.session-unread.v1'
     const TRIAGE_KEY = 'dsh.session-triage.v1'
     const SETTINGS_KEY = 'dsh.session-unread.settings.v1'
+    const RUNNING_KEY = 'dsh.session-triage.running.v1'
+    const INTERRUPTED_KEY = 'dsh.session-triage.interrupted.v1'
+    const SYNC_URL = '/session-triage/state'
     const MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000
     const MAX_ENTRIES = 500
     const PROFILES = ['web:macos', 'web:windows', 'web:linux', 'desktop:macos', 'desktop:windows', 'desktop:linux']
@@ -75,6 +81,8 @@ window.__ModuleLoader__.load({
       'board.red': '待我处理',
       'board.amber': '待回看',
       'board.recent': '最近 7 天未标记',
+      'board.interrupted': '运行中断',
+      'board.interruptedBadge': '已中断',
       'board.closed': '已闭环',
       'board.showClosed': '显示已闭环',
       'board.search': '搜索标题或工作区',
@@ -138,6 +146,8 @@ window.__ModuleLoader__.load({
       'board.red': 'Needs me',
       'board.amber': 'Review',
       'board.recent': 'Untriaged · 7d',
+      'board.interrupted': 'Ended mid-run',
+      'board.interruptedBadge': 'Interrupted',
       'board.closed': 'Settled',
       'board.showClosed': 'Show settled',
       'board.search': 'Search title or workspace',
@@ -239,6 +249,23 @@ window.__ModuleLoader__.load({
       return Object.fromEntries(entries.slice(0, MAX_ENTRIES))
     }
 
+    function normalizeRunMap(raw) {
+      const now = Date.now()
+      const entries = []
+      for (const [id, value] of Object.entries(raw && typeof raw === 'object' ? raw : {})) {
+        if (typeof id !== 'string' || id === '') continue
+        if (value === null || typeof value !== 'object') continue
+        const at = typeof value.at === 'number' && Number.isFinite(value.at) ? value.at : now
+        if (now - at > MAX_AGE_MS) continue
+        entries.push([id, {
+          title: typeof value.title === 'string' ? value.title.slice(0, 200) : '',
+          at,
+        }])
+      }
+      entries.sort((a, b) => b[1].at - a[1].at)
+      return Object.fromEntries(entries.slice(0, MAX_ENTRIES))
+    }
+
     /** Tiny persisted map: Session id -> value, with a stable snapshot reference. */
     function createMapStore(key, normalize) {
       let snapshot = Object.freeze(normalize(readJson(key)))
@@ -268,6 +295,9 @@ window.__ModuleLoader__.load({
           const next = { ...snapshot }
           delete next[id]
           commit(next)
+        },
+        replace: (next) => {
+          commit(next !== null && typeof next === 'object' ? next : {})
         },
         refresh: () => {
           snapshot = Object.freeze(normalize(readJson(key)))
@@ -310,7 +340,69 @@ window.__ModuleLoader__.load({
 
     const unread = createMapStore(UNREAD_KEY, normalizeUnread)
     const triage = createMapStore(TRIAGE_KEY, normalizeTriage)
+    const running = createMapStore(RUNNING_KEY, normalizeRunMap)
+    const interrupted = createMapStore(INTERRUPTED_KEY, normalizeRunMap)
     const settings = createSettingsStore()
+
+    /* Host-backed board state. The browser keeps localStorage as a fast cache,
+       but the durable copy lives in $DSH_HOME/session-triage/state.json: a
+       dsh web restart or an http/https/host change no longer wipes the marks. */
+    let syncSavedAt = 0
+    let syncError = ''
+    let syncReady = false
+    let syncTimer = null
+    let syncPushing = false
+    let syncDirty = false
+
+    const boardState = () => ({
+      version: 1,
+      unread: unread.getSnapshot(),
+      triage: triage.getSnapshot(),
+      running: running.getSnapshot(),
+      interrupted: interrupted.getSnapshot(),
+    })
+
+    /* Never write before the host copy has been adopted: a page that is still
+       connecting has an empty Session list and would otherwise clobber the
+       saved marks and the last-seen running set. */
+    let boardAdopted = false
+
+    function schedulePush() {
+      syncDirty = true
+      if (syncTimer !== null) return
+      syncTimer = setTimeout(() => {
+        syncTimer = null
+        if (!boardAdopted) {
+          schedulePush()
+          return
+        }
+        void flushBoardState()
+      }, 600)
+    }
+
+    async function flushBoardState() {
+      if (syncPushing || !syncDirty) return
+      syncDirty = false
+      syncPushing = true
+      try {
+        const response = await fetch(SYNC_URL, {
+          method: 'PUT',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(boardState()),
+        })
+        if (response.ok) {
+          const out = await response.json()
+          if (typeof out.savedAt === 'number') syncSavedAt = out.savedAt
+        }
+      } catch (_error) {
+        /* Host route missing or offline: localStorage stays authoritative. */
+      } finally {
+        syncPushing = false
+        if (syncDirty) schedulePush()
+      }
+    }
 
     /* External session/status changes that a hover line or menu should reflect. */
     const revision = { value: 0, listeners: new Set() }
@@ -523,11 +615,12 @@ window.__ModuleLoader__.load({
     const clearBoardReload = () => {
       try { sessionStorage.removeItem(BOARD_RELOAD_KEY) } catch (_error) { /* ignore */ }
     }
-    const GROUP_ORDER = ['running', 'red', 'amber', 'recent', 'closed']
+    const GROUP_ORDER = ['running', 'red', 'amber', 'interrupted', 'recent', 'closed']
     const GROUP_META = {
       running: { label: 'board.running', dot: 'running', bar: 'running' },
       red: { label: 'board.red', dot: 'red', bar: 'red' },
       amber: { label: 'board.amber', dot: 'amber', bar: 'amber' },
+      interrupted: { label: 'board.interrupted', dot: 'interrupted', bar: 'amber' },
       recent: { label: 'board.recent', dot: 'recent', bar: 'recent' },
       closed: { label: 'board.closed', dot: 'green', bar: 'green' },
     }
@@ -551,6 +644,7 @@ window.__ModuleLoader__.load({
 .dsu-dot.amber, .dsu-dot.warn { background: var(--dsw-alias-state-warn-primary, #f5a623); }
 .dsu-dot.green, .dsu-dot.success { background: var(--dsw-alias-state-success-primary, #30a46c); }
 .dsu-dot.recent { background: var(--dsw-alias-label-tertiary); }
+.dsu-dot.interrupted { background: transparent; box-shadow: inset 0 0 0 2px var(--dsw-alias-state-warn-primary, #f5a623); }
 .dsu-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
 .dsu-search { flex: 1 1 260px; min-width: 180px; height: 36px; padding: 0 12px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 8px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; outline: none; }
 .dsu-search::placeholder { color: var(--dsw-alias-label-tertiary); }
@@ -678,6 +772,100 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /** Runs we recorded as started but never saw finish were killed by a
+          restart; surface them instead of letting them slide into the backlog. */
+      const adoptRunning = (doc) => {
+        let list
+        try { list = ctx.sessions.list.getSnapshot() } catch (_error) { return }
+        if (list.ids.length === 0) return
+        const leftovers = new Map()
+        for (const [id, entry] of Object.entries(running.getSnapshot())) leftovers.set(id, entry)
+        for (const [id, entry] of Object.entries(doc.running !== null && typeof doc.running === 'object' ? doc.running : {})) {
+          if (!leftovers.has(id)) leftovers.set(id, entry)
+        }
+        for (const [id, entry] of leftovers) {
+          const row = list.byId[id]
+          const status = statusOf(id)
+          const live = (status !== undefined && status !== null && status.running === true)
+            || (row !== undefined && row.running === true)
+          if (live) continue
+          running.remove(id)
+          if (row === undefined || row.blank === true || row.origin === 'subagent' || isArchived(id)) continue
+          const updatedAt = typeof row.updatedAt === 'number' ? row.updatedAt : 0
+          // A run that ended after our last snapshot finished on its own.
+          if (syncSavedAt > 0 && updatedAt > syncSavedAt + 2000) continue
+          interrupted.set(id, {
+            title: row.displayTitle || row.title || entry.title || id,
+            at: Date.now(),
+          })
+        }
+        if (Object.keys(interrupted.getSnapshot()).length > 0) schedulePush()
+      }
+
+      /** Adopt the host copy of the board state; localStorage stays the fallback. */
+      const loadBoardState = async () => {
+        let doc = {}
+        try {
+          const response = await fetch(SYNC_URL, { credentials: 'include', cache: 'no-store' })
+          if (response.ok) {
+            const parsed = await response.json()
+            if (parsed !== null && typeof parsed === 'object') doc = parsed
+          }
+        } catch (_error) {
+          /* Host route missing (older host half) or offline. */
+        }
+        if (doc.savedAt !== undefined) syncSavedAt = typeof doc.savedAt === 'number' ? doc.savedAt : 0
+        const remoteUnread = doc.unread !== null && typeof doc.unread === 'object' ? doc.unread : {}
+        const remoteTriage = doc.triage !== null && typeof doc.triage === 'object' ? doc.triage : {}
+        const hasRemote = Object.keys(remoteUnread).length > 0 || Object.keys(remoteTriage).length > 0
+        let migrated = false
+        if (hasRemote) {
+          unread.replace(remoteUnread)
+          triage.replace(remoteTriage)
+        } else if (Object.keys(unread.getSnapshot()).length > 0 || Object.keys(triage.getSnapshot()).length > 0) {
+          // One-time migration for installs that only ever wrote localStorage.
+          migrated = true
+        }
+        adoptRunning(doc)
+        return migrated
+      }
+
+      /* Load once the Session list is real, then mirror local changes (debounced). */
+      let adopted = false
+      let attempts = 0
+      const tryAdopt = async () => {
+        if (adopted) return
+        let list
+        try { list = ctx.sessions.list.getSnapshot() } catch (_error) { list = undefined }
+        if (list === undefined || list.ids.length === 0) {
+          attempts += 1
+          if (attempts < 40) setTimeout(() => { void tryAdopt() }, 500)
+          return
+        }
+        let migrated = false
+        try {
+          migrated = await loadBoardState()
+        } catch (error) {
+          syncError = String(error?.message ?? error)
+        }
+        adopted = true
+        boardAdopted = true
+        if (migrated || syncDirty) schedulePush()
+      }
+      ctx.effect(() => {
+        const disposers = [
+          unread.subscribe(schedulePush),
+          triage.subscribe(schedulePush),
+          running.subscribe(schedulePush),
+          interrupted.subscribe(schedulePush),
+        ]
+        const timer = setTimeout(() => { void tryAdopt() }, 0)
+        return () => {
+          clearTimeout(timer)
+          for (const dispose of disposers) dispose()
+        }
+      }, 'session-triage: host-backed state')
+
       /**
        * Client-only triage suggestion. It reads title + live status only; it
        * never reads conversation content and never applies itself.
@@ -738,7 +926,13 @@ window.__ModuleLoader__.load({
       let previousCurrent
       const syncOpen = () => {
         const next = currentSessionId(ctx.sessions.list.getSnapshot())
-        if (next !== undefined && next !== previousCurrent && unread.has(next)) unread.remove(next)
+        const changed = next !== undefined && next !== previousCurrent
+        if (changed) {
+          if (unread.has(next)) unread.remove(next)
+          /* A Session that was already open when the process died must keep its
+             interrupted mark; only actually opening it again clears it. */
+          if (previousCurrent !== undefined && interrupted.has(next)) interrupted.remove(next)
+        }
         previousCurrent = next
       }
       ctx.effect(() => {
@@ -766,6 +960,7 @@ window.__ModuleLoader__.load({
         } catch (_error) {
           return
         }
+        if (list.ids.length === 0) return
         const current = currentSessionId(list)
         const boardActive = boardIsActive()
         const next = new Map()
@@ -773,12 +968,21 @@ window.__ModuleLoader__.load({
           const row = list.byId[id]
           if (row === undefined || row.blank === true || row.origin === 'subagent') continue
           const status = statusOf(id)
-          const running = status !== undefined && status !== null && typeof status.running === 'boolean'
+          const isRunning = status !== undefined && status !== null && typeof status.running === 'boolean'
             ? status.running === true
             : row.running === true
-          next.set(id, running)
+          next.set(id, isRunning)
+          /* Keep the last-seen running set for the next load to compare against. */
+          if (isRunning) {
+            if (!running.has(id)) {
+              running.set(id, { title: row.displayTitle || row.title || id, at: Date.now() })
+            }
+            if (interrupted.has(id)) interrupted.remove(id)
+          } else if (adopted && running.has(id)) {
+            running.remove(id)
+          }
           if (previousRuns === null) continue
-          if (previousRuns.get(id) !== true || running) continue
+          if (previousRuns.get(id) !== true || isRunning) continue
           if (isArchived(id)) continue
           const entry = triage.getSnapshot()[id]
           if (entry !== undefined && entry !== null && entry.level === 'green') continue
@@ -892,6 +1096,7 @@ window.__ModuleLoader__.load({
                   source: 'auto',
                   updatedAt: Date.now(),
                 })
+                interrupted.remove(sessionId)
               },
             })
           }
@@ -1109,6 +1314,7 @@ window.__ModuleLoader__.load({
                       updatedAt: Date.now(),
                     })
                   }
+                  interrupted.remove(current)
                 },
               }
             },
@@ -1169,6 +1375,7 @@ window.__ModuleLoader__.load({
         const statuses = useObservable(ctx.uiSession.sessionStatus)
         const unreadState = useObservable(unread)
         const triageState = useObservable(triage)
+        const interruptedState = useObservable(interrupted)
         const [query, setQuery] = React.useState('')
         const [workspaceFilter, setWorkspaceFilter] = React.useState('all')
         const [groupFilter, setGroupFilter] = React.useState('all')
@@ -1197,7 +1404,10 @@ window.__ModuleLoader__.load({
           const rows = []
           for (const id of sessions.ids) {
             const row = sessions.byId[id]
-            if (row === undefined || row.blank === true || row.origin === 'subagent') continue
+            const interruptedEntry = interruptedState[id]
+            if (row === undefined || row.origin === 'subagent') continue
+            // A run that died before its first turn is blank; keep it anyway.
+            if (row.blank === true && interruptedEntry === undefined) continue
             if (archived.has(id)) continue
             const status = statuses.get(id)
             const entry = triageState[id]
@@ -1206,11 +1416,15 @@ window.__ModuleLoader__.load({
             const pending = status !== undefined && status.pendingInteraction != null
             const unreadFlag = (status !== undefined && status.completionUnread === true)
               || Object.prototype.hasOwnProperty.call(unreadState, id)
-            const updatedAt = typeof row.updatedAt === 'number' ? row.updatedAt : now
+            const interruptedFlag = interruptedEntry !== undefined && !running
+            const updatedAt = typeof row.updatedAt === 'number'
+              ? row.updatedAt
+              : interruptedEntry !== undefined ? interruptedEntry.at : now
             const age = now - updatedAt
             let group
             if (pending || level === 'red') group = 'red'
             else if (level === 'amber') group = 'amber'
+            else if (interruptedFlag) group = 'interrupted'
             else if (running) group = 'running'
             else if (unreadFlag) group = 'amber'
             else if (level === 'green') {
@@ -1223,10 +1437,12 @@ window.__ModuleLoader__.load({
             const title = row.displayTitle || row.title || id
             const bar = group === 'red' ? 'red'
               : group === 'amber' ? 'amber'
-                : group === 'running' ? 'running'
-                  : group === 'closed' ? 'green' : 'recent'
+                : group === 'interrupted' ? 'amber'
+                  : group === 'running' ? 'running'
+                    : group === 'closed' ? 'green' : 'recent'
             rows.push({
               id, title, updatedAt, group, level, running, pending, unread: unreadFlag,
+              interrupted: interruptedFlag,
               workspaceId: workspace === undefined ? 'none' : workspace.workspaceId,
               workspaceTitle, bar,
               search: (title + ' ' + workspaceTitle).toLowerCase(),
@@ -1240,7 +1456,7 @@ window.__ModuleLoader__.load({
             return b.updatedAt - a.updatedAt
           })
           return rows
-        }, [sessions, workspaces, statuses, unreadState, triageState, now, showClosed, workspaceRows, tr])
+        }, [sessions, workspaces, statuses, unreadState, triageState, interruptedState, now, showClosed, workspaceRows, tr])
 
         const matchingRows = React.useMemo(() => {
           const needle = query.trim().toLowerCase()
@@ -1252,11 +1468,11 @@ window.__ModuleLoader__.load({
         }, [allRows, query, workspaceFilter])
 
         const counts = React.useMemo(() => {
-          const result = { running: 0, red: 0, amber: 0, recent: 0, closed: 0 }
+          const result = { running: 0, red: 0, amber: 0, interrupted: 0, recent: 0, closed: 0 }
           for (const row of matchingRows) result[row.group] += 1
           return result
         }, [matchingRows])
-        const activeCount = counts.running + counts.red + counts.amber + counts.recent
+        const activeCount = counts.running + counts.red + counts.amber + counts.interrupted + counts.recent
 
         const filtered = React.useMemo(() => (
           groupFilter === 'all'
@@ -1289,6 +1505,7 @@ window.__ModuleLoader__.load({
             source: 'manual',
             updatedAt: Date.now(),
           })
+          interrupted.remove(id)
         }
         const groupRows = (group) => filtered.filter(row => row.group === group)
 
@@ -1309,6 +1526,7 @@ window.__ModuleLoader__.load({
 
         const renderRow = (row) => {
           const badges = []
+          if (row.interrupted) badges.push(badge('interrupted', tr('board.interruptedBadge'), 'amber', false))
           if (row.running) badges.push(badge('running', tr('board.runBadge'), 'running', true))
           if (row.pending) badges.push(badge('pending', tr('board.pending'), 'red', false))
           if (row.level !== undefined && row.group === 'running') {
@@ -1378,6 +1596,7 @@ window.__ModuleLoader__.load({
               chip('running', tr('board.running'), counts.running, 'running'),
               chip('red', tr('board.red'), counts.red, 'red'),
               chip('amber', tr('board.amber'), counts.amber, 'amber'),
+              chip('interrupted', tr('board.interrupted'), counts.interrupted, 'interrupted'),
               chip('recent', tr('board.recent'), counts.recent, 'recent')),
             h('div', { className: 'dsu-toolbar' },
               h('input', {

@@ -4,7 +4,7 @@
 
 > A session board for DSH Web: unread marks, red / amber / green processing status, and one cross-workspace overview.
 
-![Version](https://img.shields.io/badge/version-0.6.0-4c6fff)
+![Version](https://img.shields.io/badge/version-0.7.0-4c6fff)
 ![License](https://img.shields.io/badge/license-MIT-30a46c)
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
@@ -89,6 +89,14 @@ The board collects sessions across workspaces on one page:
 - **Quick dots**: hover a row to reveal red / amber / green dots. Click to set, click the same color again to clear. Click the row itself to open the session; browsing the board does not interrupt the current session.
 - **Entry**: the sidebar entry can be pinned, or tucked under **More** like other panels. From the keyboard, `Ctrl+Alt+L` (macOS `Cmd+Alt+L`) opens the board; press it again to return to the panel or session you came from.
 
+### Persistence and interrupted runs
+
+- **State lives on the host**: unread marks, red / amber / green status, and the last-seen running set are written to `$DSH_HOME/session-triage/state.json` through `/session-triage/state` (host half). localStorage is only a cache. A dsh web restart, an http ↔ https switch, or a different IP / hostname no longer wipes them.
+- **Upgrade path**: older versions only wrote localStorage; the first load after upgrading pushes those marks to the host instead of dropping them.
+- **Out of reach**: marks stranded on another origin (for example http before switching to https) cannot be read — same-origin policy — and are not recoverable.
+- **Interrupted runs**: a Session that starts running is recorded; after a restart, one that is no longer running appears under **Ended mid-run** with an *Interrupted* badge. Opening it, letting it run again, or setting red / amber / green clears the mark.
+- Only "saw the start, never saw the end" counts: a run that finished while the page was alive is not flagged. Nothing is written before the Session list is available, so a still-connecting page cannot clobber the snapshot.
+
 ### Settings and shortcuts
 
 Settings → General → **Session marks**:
@@ -129,10 +137,10 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 For production, pin a release tag so a later push to master cannot change what is installed:
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.6.0"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.7.0"
 ```
 
-You can also replace `v0.6.0` with a full or short commit SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
+You can also replace `v0.7.0` with a full or short commit SHA. Refresh the page after installation. If the sidebar entry does not appear, confirm that `dsh-session-triage` is listed in the profile's `dsh.profile.bundles`.
 
 ### Upgrade
 
@@ -174,9 +182,10 @@ All data stays in the current browser and origin:
 
 | Key | Contents |
 |---|---|
-| `dsh.session-unread.v1` | Unread: `{ "<sessionId>": <marked-at epoch ms> }` |
+| `dsh.session-unread.v1` | Unread cache: `{ "<sessionId>": <marked-at epoch ms> }` |
 | `dsh.session-triage.v1` | Processing status: `{ "<sessionId>": { level, reason, source, updatedAt } }` |
 | `dsh.session-unread.settings.v1` | Settings: `{ autoSuggest, showBars }` |
+| `$DSH_HOME/session-triage/state.json` | Authoritative copy: `{ unread, triage, running, interrupted }`, mode 600 |
 
 - Unread and status maps are capped at 500 entries and expire after 180 days; malformed JSON falls back to defaults.
 - The plugin makes no network requests, reads no message content, and calls no model. It only reads the client-side sessions / workspaces / uiSession snapshots.
