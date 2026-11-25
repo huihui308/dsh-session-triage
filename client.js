@@ -83,6 +83,32 @@ window.__ModuleLoader__.load({
       'board.recent': '最近 7 天未标记',
       'board.interrupted': '运行中断',
       'board.interruptedBadge': '已中断',
+      'board.schedule': '定时任务',
+      'schedule.active': '已开启',
+      'schedule.paused': '已暂停',
+      'schedule.ended': '已结束',
+      'schedule.pause': '暂停',
+      'schedule.resume': '恢复',
+      'schedule.run': '立即执行',
+      'schedule.edit': '编辑 ↗',
+      'schedule.delete': '删除',
+      'schedule.confirmDelete': '确认删除',
+      'schedule.running': '执行中',
+      'schedule.toSession': '复用「{title}」',
+      'schedule.newOnce': '首次投递新建会话',
+      'schedule.newEach': '每次新建会话',
+      'schedule.sessionGone': '目标会话已不存在',
+      'schedule.empty': '没有定时任务',
+      'schedule.emptyHint': '在 Automation tasks 里新建，或让 Agent 用 schedule_create 建一条。',
+      'schedule.hint': '规则编辑在 Automation tasks 面板；这里只做查看和常用操作。',
+      'schedule.unavailable': '定时任务服务不可用',
+      'schedule.pauseDone': '已暂停',
+      'schedule.resumeDone': '已恢复',
+      'schedule.runDone': '已提交执行',
+      'schedule.deleteDone': '已删除',
+      'schedule.conflict': '这条任务刚在别处改过，已刷新',
+      'schedule.pending': '上一次投递还在执行中',
+      'schedule.failed': '操作失败，稍后再试',
       'board.closed': '已闭环',
       'board.showClosed': '显示已闭环',
       'board.search': '搜索标题或工作区',
@@ -148,6 +174,32 @@ window.__ModuleLoader__.load({
       'board.recent': 'Untriaged · 7d',
       'board.interrupted': 'Ended mid-run',
       'board.interruptedBadge': 'Interrupted',
+      'board.schedule': 'Scheduled',
+      'schedule.active': 'Active',
+      'schedule.paused': 'Paused',
+      'schedule.ended': 'Ended',
+      'schedule.pause': 'Pause',
+      'schedule.resume': 'Resume',
+      'schedule.run': 'Run now',
+      'schedule.edit': 'Edit ↗',
+      'schedule.delete': 'Delete',
+      'schedule.confirmDelete': 'Confirm delete',
+      'schedule.running': 'Delivering',
+      'schedule.toSession': 'Reuses “{title}”',
+      'schedule.newOnce': 'New session on first run',
+      'schedule.newEach': 'New session every run',
+      'schedule.sessionGone': 'Target session is gone',
+      'schedule.empty': 'No scheduled tasks',
+      'schedule.emptyHint': 'Create one in Automation tasks, or ask the Agent to run schedule_create.',
+      'schedule.hint': 'Rules are edited in Automation tasks; this view covers reading and common actions.',
+      'schedule.unavailable': 'Schedule service unavailable',
+      'schedule.pauseDone': 'Paused',
+      'schedule.resumeDone': 'Resumed',
+      'schedule.runDone': 'Delivery queued',
+      'schedule.deleteDone': 'Deleted',
+      'schedule.conflict': 'Changed elsewhere meanwhile; refreshed',
+      'schedule.pending': 'The previous delivery is still running',
+      'schedule.failed': 'Action failed; try again',
       'board.closed': 'Settled',
       'board.showClosed': 'Show settled',
       'board.search': 'Search title or workspace',
@@ -379,6 +431,25 @@ window.__ModuleLoader__.load({
         void flushBoardState()
       }, 600)
     }
+
+    /* Host schedule catalog, read and mutated through the client remote proxy.
+       Empty until the board first asks; unavailable when ui-schedule is absent. */
+    const scheduleStore = (() => {
+      let snapshot = Object.freeze({ status: 'idle', records: [], notice: '', busy: {} })
+      const listeners = new Set()
+      const emit = () => { for (const listener of [...listeners]) listener() }
+      return {
+        getSnapshot: () => snapshot,
+        subscribe: (listener) => {
+          listeners.add(listener)
+          return () => { listeners.delete(listener) }
+        },
+        set: (patch) => {
+          snapshot = Object.freeze({ ...snapshot, ...patch })
+          emit()
+        },
+      }
+    })()
 
     async function flushBoardState() {
       if (syncPushing || !syncDirty) return
@@ -645,6 +716,20 @@ window.__ModuleLoader__.load({
 .dsu-dot.green, .dsu-dot.success { background: var(--dsw-alias-state-success-primary, #30a46c); }
 .dsu-dot.recent { background: var(--dsw-alias-label-tertiary); }
 .dsu-dot.interrupted { background: transparent; box-shadow: inset 0 0 0 2px var(--dsw-alias-state-warn-primary, #f5a623); }
+.dsu-dot.schedule { background: transparent; box-shadow: inset 0 0 0 2px var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-task-time { flex: none; width: 62px; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.dsu-task { align-items: center; }
+.dsu-task .dsu-row-main { flex: 1; min-width: 0; }
+.dsu-task-actions { opacity: 1; gap: 6px; }
+.dsu-btn { font: inherit; font-size: 12px; height: 24px; padding: 0 9px; border: 1px solid var(--dsw-alias-border-l1, rgba(0,0,0,.12)); border-radius: 7px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-secondary); cursor: pointer; white-space: nowrap; }
+.dsu-btn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0,0,0,.04)); }
+.dsu-btn:disabled { opacity: .45; cursor: default; }
+.dsu-btn.danger { color: var(--dsw-alias-state-error-primary, #e5484d); }
+.dsu-task-chip { color: var(--dsw-alias-state-business-primary, #4c6fff); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dsu-task-running { color: var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-sched-notice { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: var(--dsw-alias-bg-layer-2, rgba(0,0,0,.06)); color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.dsu-sched-hint { margin-top: 14px; color: var(--dsw-alias-label-tertiary); font-size: 12px; }
+@media (max-width: 720px) { .dsu-task-actions { flex-wrap: wrap; } .dsu-task-time { width: auto; } }
 .dsu-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
 .dsu-search { flex: 1 1 260px; min-width: 180px; height: 36px; padding: 0 12px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 8px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; outline: none; }
 .dsu-search::placeholder { color: var(--dsw-alias-label-tertiary); }
@@ -829,6 +914,93 @@ window.__ModuleLoader__.load({
         adoptRunning(doc)
         return migrated
       }
+
+      /* --- host schedule catalog ------------------------------------------- */
+      const scheduleRemote = () => {
+        try {
+          if (typeof ctx.get === 'function') {
+            const remote = ctx.get('remote')
+            if (remote !== undefined && remote !== null && remote.schedule !== undefined) return remote.schedule
+          }
+        } catch (_error) { /* remote service not mounted */ }
+        try { return ctx.remote?.schedule } catch (_error) { return undefined }
+      }
+
+      const refreshSchedules = async () => {
+        const api = scheduleRemote()
+        if (api === undefined) {
+          scheduleStore.set({ status: 'unavailable' })
+          return
+        }
+        if (scheduleStore.getSnapshot().status !== 'ready') scheduleStore.set({ status: 'loading' })
+        try {
+          const result = await api.catalog()
+          if (result === undefined || result === null || result.ok !== true) {
+            scheduleStore.set({ status: 'error' })
+            return
+          }
+          scheduleStore.set({
+            status: 'ready',
+            records: Array.isArray(result.value) ? result.value : [],
+          })
+        } catch (_error) {
+          scheduleStore.set({ status: 'error' })
+        }
+      }
+
+      const scheduleBusy = (id, busy) => {
+        const next = { ...scheduleStore.getSnapshot().busy }
+        if (busy) next[id] = true
+        else delete next[id]
+        scheduleStore.set({ busy: next })
+      }
+
+      const scheduleAction = async (record, kind) => {
+        const api = scheduleRemote()
+        if (api === undefined) return
+        const t = translate()
+        scheduleBusy(record.id, true)
+        try {
+          let result
+          if (kind === 'pause' || kind === 'resume') {
+            result = await api.edit({
+              id: record.id,
+              action: 'update',
+              patch: { active: kind === 'resume' },
+              expectedUpdatedAt: record.updatedAt ?? null,
+            })
+          } else if (kind === 'delete') {
+            result = await api.edit({ id: record.id, action: 'delete', expectedUpdatedAt: record.updatedAt ?? null })
+          } else {
+            result = await api.run({ id: record.id })
+          }
+          const code = result !== undefined && result !== null && result.ok === true
+            ? undefined
+            : result?.error?.code
+          if (code === 'schedule_conflict') scheduleStore.set({ notice: t('schedule.conflict') })
+          else if (code === 'schedule_execution_pending') scheduleStore.set({ notice: t('schedule.pending') })
+          else if (code === 'schedule_not_found') { scheduleStore.set({ notice: t('schedule.failed') }) }
+          else if (code !== undefined) scheduleStore.set({ notice: t('schedule.failed') })
+          else scheduleStore.set({ notice: t('schedule.' + kind + 'Done') })
+        } catch (_error) {
+          scheduleStore.set({ notice: t('schedule.failed') })
+        } finally {
+          scheduleBusy(record.id, false)
+          void refreshSchedules()
+        }
+      }
+
+      /* Load once the board exists, and follow host-side changes. */
+      ctx.effect(() => {
+        void refreshSchedules()
+        let disposeEvent = () => {}
+        try {
+          const remote = typeof ctx.get === 'function' ? ctx.get('remote') : undefined
+          const dispose = remote?.$on?.('schedule/changed', () => { void refreshSchedules() })
+          if (typeof dispose === 'function') disposeEvent = dispose
+        } catch (_error) { /* event bridge missing */ }
+        return () => { disposeEvent() }
+      }, 'session-triage: schedule catalog')
 
       /* Load once the Session list is real, then mirror local changes (debounced). */
       let adopted = false
@@ -1376,6 +1548,8 @@ window.__ModuleLoader__.load({
         const unreadState = useObservable(unread)
         const triageState = useObservable(triage)
         const interruptedState = useObservable(interrupted)
+        const scheduleState = useObservable(scheduleStore)
+        const [deleteConfirm, setDeleteConfirm] = React.useState(null)
         const [query, setQuery] = React.useState('')
         const [workspaceFilter, setWorkspaceFilter] = React.useState('all')
         const [groupFilter, setGroupFilter] = React.useState('all')
@@ -1398,6 +1572,70 @@ window.__ModuleLoader__.load({
           options.sort((a, b) => a.title.localeCompare(b.title))
           return { bySession, options }
         }, [workspaces])
+
+        const scheduleRecords = React.useMemo(
+          () => (Array.isArray(scheduleState.records) ? scheduleState.records : []),
+          [scheduleState.records],
+        )
+        const visibleTasks = React.useMemo(() => {
+          const rank = (record) => record.status === 'active' ? 0 : record.status === 'paused' ? 1 : 2
+          const when = (record) => {
+            const at = typeof record.scheduledAt === 'string' ? Date.parse(record.scheduledAt) : Number.NaN
+            return Number.isFinite(at) ? at : Number.MAX_SAFE_INTEGER
+          }
+          return scheduleRecords
+            .filter(record => showClosed || record.status !== 'ended')
+            .slice()
+            .sort((a, b) => rank(a) - rank(b) || when(a) - when(b))
+        }, [scheduleRecords, showClosed])
+        const scheduleCount = scheduleRecords.filter(record => record.status !== 'ended').length
+        const taskBySession = React.useMemo(() => {
+          const map = new Map()
+          for (const record of scheduleRecords) {
+            const target = record.target
+            const sessionId = target !== null && typeof target === 'object' ? target.sessionId : undefined
+            if (typeof sessionId !== 'string') continue
+            const list = map.get(sessionId)
+            if (list === undefined) map.set(sessionId, [record])
+            else list.push(record)
+          }
+          return map
+        }, [scheduleRecords])
+
+        const formatTaskTime = (iso) => {
+          if (typeof iso !== 'string') return '—'
+          const at = Date.parse(iso)
+          if (!Number.isFinite(at)) return '—'
+          const date = new Date(at)
+          const hh = String(date.getHours()).padStart(2, '0')
+          const mm = String(date.getMinutes()).padStart(2, '0')
+          const today = new Date(now)
+          const sameDay = date.getFullYear() === today.getFullYear()
+            && date.getMonth() === today.getMonth()
+            && date.getDate() === today.getDate()
+          return sameDay ? hh + ':' + mm : (date.getMonth() + 1) + '-' + date.getDate() + ' ' + hh + ':' + mm
+        }
+
+        const describeTarget = (target) => {
+          if (target === null || typeof target !== 'object') return tr('schedule.newEach')
+          if (target.kind === 'session') {
+            const row = sessions.byId[target.sessionId]
+            const title = row === undefined ? undefined : (row.displayTitle || row.title || target.sessionId)
+            return title === undefined ? tr('schedule.sessionGone') : tr('schedule.toSession', { title: String(title).slice(0, 36) })
+          }
+          return target.kind === 'new_once' ? tr('schedule.newOnce') : tr('schedule.newEach')
+        }
+
+        const openSchedulesPanel = () => {
+          try { ctx.layout.selectPanel('schedules') } catch (_error) { /* official panel missing */ }
+        }
+
+        /* Transient notice from a schedule action; hides itself. */
+        React.useEffect(() => {
+          if (scheduleState.notice === '') return undefined
+          const timer = window.setTimeout(() => scheduleStore.set({ notice: '' }), 4000)
+          return () => { window.clearTimeout(timer) }
+        }, [scheduleState.notice])
 
         const allRows = React.useMemo(() => {
           const archived = new Set(workspaces.archivedSessionIds)
@@ -1440,9 +1678,11 @@ window.__ModuleLoader__.load({
                 : group === 'interrupted' ? 'amber'
                   : group === 'running' ? 'running'
                     : group === 'closed' ? 'green' : 'recent'
+            const tasks = taskBySession.get(id) ?? []
+            const nextTask = tasks.find(task => task.status === 'active')
             rows.push({
               id, title, updatedAt, group, level, running, pending, unread: unreadFlag,
-              interrupted: interruptedFlag,
+              interrupted: interruptedFlag, tasks, taskAt: nextTask === undefined ? undefined : nextTask.scheduledAt,
               workspaceId: workspace === undefined ? 'none' : workspace.workspaceId,
               workspaceTitle, bar,
               search: (title + ' ' + workspaceTitle).toLowerCase(),
@@ -1456,7 +1696,7 @@ window.__ModuleLoader__.load({
             return b.updatedAt - a.updatedAt
           })
           return rows
-        }, [sessions, workspaces, statuses, unreadState, triageState, interruptedState, now, showClosed, workspaceRows, tr])
+        }, [sessions, workspaces, statuses, unreadState, triageState, interruptedState, taskBySession, now, showClosed, workspaceRows, tr])
 
         const matchingRows = React.useMemo(() => {
           const needle = query.trim().toLowerCase()
@@ -1556,7 +1796,13 @@ window.__ModuleLoader__.load({
             h('div', { className: 'dsu-row-meta' },
               h('span', { className: 'dsu-row-workspace', title: row.workspaceTitle }, row.workspaceTitle),
               h('span', { className: 'dsu-sep', 'aria-hidden': 'true' }, '·'),
-              h('span', null, formatAge(row.updatedAt, now, tr)))),
+              h('span', null, formatAge(row.updatedAt, now, tr)),
+              row.tasks.length === 0 ? null : h(React.Fragment, null,
+                h('span', { className: 'dsu-sep', 'aria-hidden': 'true' }, '·'),
+                h('span', {
+                  className: 'dsu-task-chip',
+                  title: row.tasks.map(task => task.title).join(' · '),
+                }, '⏱ ' + (row.taskAt === undefined ? tr('schedule.paused') : formatTaskTime(row.taskAt)))))),
           h('div', { className: 'dsu-row-badges' }, badges),
           h('div', { className: 'dsu-actions' }, LEVEL_IDS.map(level => {
             const pressed = row.level === level
@@ -1578,6 +1824,52 @@ window.__ModuleLoader__.load({
           })))
         }
 
+        const renderTask = (record) => {
+          const busy = scheduleState.busy[record.id] === true
+          const active = record.status === 'active'
+          const paused = record.status === 'paused'
+          const ended = record.status === 'ended'
+          const confirming = deleteConfirm === record.id
+          const button = (key, label, onClick, danger = false) => h('button', {
+            key,
+            type: 'button',
+            className: 'dsu-btn' + (danger ? ' danger' : ''),
+            disabled: busy,
+            onClick: (event) => { event.stopPropagation(); onClick() },
+          }, label)
+          return h('div', { key: record.id, className: 'dsu-row dsu-task', 'data-task-id': record.id },
+            h('span', { className: 'dsu-task-time' }, ended ? '—' : formatTaskTime(record.scheduledAt)),
+            h('div', { className: 'dsu-row-main' },
+              h('div', { className: 'dsu-row-title', title: typeof record.title === 'string' ? record.title : '' },
+                h('span', { className: 'dsu-row-title-text' }, record.title || record.id)),
+              h('div', { className: 'dsu-row-meta' },
+                h('span', null, describeTarget(record.target)),
+                record.executionActive === true
+                  ? h('span', { className: 'dsu-task-running' }, tr('schedule.running'))
+                  : null)),
+            h('span', { className: 'dsu-badge ' + (active ? 'green' : paused ? 'amber' : '') },
+              tr(active ? 'schedule.active' : paused ? 'schedule.paused' : 'schedule.ended')),
+            h('div', { className: 'dsu-actions dsu-task-actions' },
+              active || paused
+                ? button('toggle', tr(active ? 'schedule.pause' : 'schedule.resume'), () => { void scheduleAction(record, active ? 'pause' : 'resume') })
+                : null,
+              active
+                ? button('run', tr('schedule.run'), () => { void scheduleAction(record, 'run') })
+                : null,
+              button('edit', tr('schedule.edit'), () => { openSchedulesPanel() }),
+              button('delete', confirming ? tr('schedule.confirmDelete') : tr('schedule.delete'), () => {
+                if (confirming) {
+                  setDeleteConfirm(null)
+                  void scheduleAction(record, 'delete')
+                  return
+                }
+                setDeleteConfirm(record.id)
+                window.setTimeout(() => {
+                  setDeleteConfirm(current => (current === record.id ? null : current))
+                }, 4000)
+              }, true)))
+        }
+
         const groups = GROUP_ORDER
           .filter(group => group !== 'closed' || showClosed)
           .map(group => ({ group, rows: groupRows(group) }))
@@ -1597,6 +1889,7 @@ window.__ModuleLoader__.load({
               chip('red', tr('board.red'), counts.red, 'red'),
               chip('amber', tr('board.amber'), counts.amber, 'amber'),
               chip('interrupted', tr('board.interrupted'), counts.interrupted, 'interrupted'),
+              scheduleState.status === 'unavailable' ? null : chip('schedule', tr('board.schedule'), scheduleCount, 'schedule'),
               chip('recent', tr('board.recent'), counts.recent, 'recent')),
             h('div', { className: 'dsu-toolbar' },
               h('input', {
@@ -1626,7 +1919,18 @@ window.__ModuleLoader__.load({
               },
               h('span', { className: 'dsu-check', 'aria-hidden': 'true' }, showClosed ? '✓' : ''),
               h('span', null, tr('board.showClosed') + (showClosed ? ' (' + counts.closed + ')' : '')))),
-            groups.length === 0
+            groupFilter === 'schedule'
+              ? h('div', { className: 'dsu-sched-list' },
+                scheduleState.notice === '' ? null : h('div', { className: 'dsu-sched-notice' }, scheduleState.notice),
+                scheduleState.status === 'unavailable'
+                  ? h('div', { className: 'dsu-empty' }, h('div', { className: 'dsu-empty-title' }, tr('schedule.unavailable')))
+                  : visibleTasks.length === 0
+                    ? h('div', { className: 'dsu-empty' },
+                      h('div', { className: 'dsu-empty-title' }, tr('schedule.empty')),
+                      h('div', { className: 'dsu-empty-hint' }, tr('schedule.emptyHint')))
+                    : visibleTasks.map(renderTask),
+                h('div', { className: 'dsu-sched-hint' }, tr('schedule.hint')))
+              : groups.length === 0
               ? h('div', { className: 'dsu-empty' },
                 h('div', { className: 'dsu-empty-title' }, tr(hasFilters ? 'board.noMatch' : 'board.empty')),
                 h('div', { className: 'dsu-empty-hint' }, tr(hasFilters ? 'board.noMatchHint' : 'board.emptyHint')),
