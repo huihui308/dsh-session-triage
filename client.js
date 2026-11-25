@@ -1447,7 +1447,7 @@ window.__ModuleLoader__.load({
          spends its three slots (Mod+/, Mod+Shift+, Mod+Shift+.) on core and
          earlier plugin commands, so the default is declared for Desktop and
          Windows/macOS Web only — Linux Web keeps the command, unbound. */
-      const boardBinding = { code: 'KeyP', modifiers: ['primary', 'alt'] }
+      const boardBinding = { code: 'KeyL', modifiers: ['primary', 'alt'] }
       const boardDefaults = {
         'desktop:macos': boardBinding,
         'desktop:windows': boardBinding,
@@ -1576,41 +1576,10 @@ window.__ModuleLoader__.load({
         return () => { for (const dispose of disposers) dispose() }
       }, 'session-unread: shortcuts')
 
-      /* Some browser profiles reject Mod+Alt in DSH's shortcut catalog.
-         When the board command has no effective binding, keep the intended
-         Ctrl+Alt+P gesture working at the plugin level instead of leaving
-         the board unreachable. */
+      /* P proved unreliable on some Windows setups; restore the stable L
+         default once for profiles that still carry an explicit P binding. */
       ctx.effect(() => {
-        let fallback = false
-        const sync = () => {
-          const rows = ctx.shortcuts.catalog.getSnapshot()
-          const row = Array.isArray(rows)
-            ? rows.find(item => item.id === 'session-triage.board')
-            : undefined
-          fallback = row === undefined || row.binding === null
-        }
-        const onKey = (event) => {
-          if (!fallback || event.defaultPrevented || event.repeat || event.isComposing) return
-          if (event.code !== 'KeyP' || !event.ctrlKey || !event.altKey) return
-          if (event.shiftKey || event.metaKey) return
-          event.preventDefault()
-          event.stopPropagation()
-          toggleBoard()
-        }
-        window.addEventListener('keydown', onKey, true)
-        const dispose = ctx.shortcuts.catalog.subscribe(sync)
-        sync()
-        return () => {
-          window.removeEventListener('keydown', onKey, true)
-          dispose()
-        }
-      }, 'session-triage: board shortcut fallback')
-
-      /* One-time migration: older builds shipped Mod+Alt+L. If a profile
-         still carries that binding, reset it once to the new P default;
-         an explicit L chosen afterwards is left alone. */
-      ctx.effect(() => {
-        const key = 'dsh.session-triage.board-shortcut-p.v1'
+        const key = 'dsh.session-triage.board-shortcut-l.v1'
         try {
           if (window.localStorage.getItem(key) === '1') return () => {}
         } catch (_error) {
@@ -1620,13 +1589,12 @@ window.__ModuleLoader__.load({
         let running = false
         let attempts = 0
         const migrate = () => {
-          if (done || running) return
+          if (done || running || attempts >= 4) return
           const rows = ctx.shortcuts.catalog.getSnapshot()
           const row = Array.isArray(rows)
             ? rows.find(item => item.id === 'session-triage.board')
             : undefined
-          if (row === undefined || row.binding === null || row.binding.code !== 'KeyL') return
-          if (attempts >= 4) return
+          if (row === undefined || row.binding === null || row.binding.code !== 'KeyP') return
           try {
             const snapshot = ctx.shortcuts.config.getSnapshot()
             if (snapshot.status !== 'ready') return
@@ -1658,7 +1626,7 @@ window.__ModuleLoader__.load({
         const disposeConfig = ctx.shortcuts.config.subscribe(migrate)
         migrate()
         return () => { disposeCatalog(); disposeConfig() }
-      }, 'session-triage: migrate legacy board shortcut')
+      }, 'session-triage: restore legacy board shortcut')
 
       /* Board CSS is injected once; rows reuse the app's theme tokens. */
       ctx.effect(() => {
@@ -1698,7 +1666,7 @@ window.__ModuleLoader__.load({
         const boardKeys = boardShortcutEntry !== undefined && Array.isArray(boardShortcutEntry.keys)
           ? boardShortcutEntry.keys.join('+')
           : ''
-        const displayedBoardKeys = boardKeys === '' ? 'Ctrl+Alt+P' : boardKeys
+        const displayedBoardKeys = boardKeys === '' ? 'Ctrl+Alt+L' : boardKeys
 
         React.useEffect(() => {
           const timer = window.setInterval(() => setNow(Date.now()), 60 * 1000)
