@@ -1465,6 +1465,27 @@ window.__ModuleLoader__.load({
         if (search !== null) { search.focus(); return }
         if (attempt < 8) window.requestAnimationFrame(() => focusBoardSearch(attempt + 1))
       }
+      const toggleBoard = () => {
+        const layout = ctx.layout
+        if (layout === undefined) return false
+        const active = layout.panelInfo.getSnapshot().activePanelId
+        if (active === BOARD_ID) {
+          clearBoardReload()
+          const back = boardReturn
+          boardReturn = null
+          try { layout.selectPanel(back) } catch (_error) { layout.selectPanel(null) }
+          return true
+        }
+        boardReturn = active
+        try {
+          layout.selectPanel(BOARD_ID)
+        } catch (_error) {
+          boardReturn = null
+          return false
+        }
+        window.requestAnimationFrame(() => focusBoardSearch())
+        return true
+      }
       ctx.effect(() => {
         const disposers = [
           registerShortcut({
@@ -1547,35 +1568,43 @@ window.__ModuleLoader__.load({
             defaults: boardDefaults,
             regions: ['page', 'editable'],
             modals: [],
-            resolve: () => {
-              const layout = ctx.layout
-              if (layout === undefined) return { status: 'blocked', reason: 'no-board' }
-              const active = layout.panelInfo.getSnapshot().activePanelId
-              return {
-                status: 'handled',
-                run: () => {
-                  if (active === BOARD_ID) {
-                    clearBoardReload()
-                    const back = boardReturn
-                    boardReturn = null
-                    try { layout.selectPanel(back) } catch (_error) { layout.selectPanel(null) }
-                    return
-                  }
-                  boardReturn = active
-                  try {
-                    layout.selectPanel(BOARD_ID)
-                  } catch (_error) {
-                    boardReturn = null
-                    return
-                  }
-                  window.requestAnimationFrame(() => focusBoardSearch())
-                },
-              }
-            },
+            resolve: () => ctx.layout === undefined
+              ? { status: 'blocked', reason: 'no-board' }
+              : { status: 'handled', run: toggleBoard },
           }),
         ]
         return () => { for (const dispose of disposers) dispose() }
       }, 'session-unread: shortcuts')
+
+      /* Some browser profiles reject Mod+Alt in DSH's shortcut catalog.
+         When the board command has no effective binding, keep the intended
+         Ctrl+Alt+P gesture working at the plugin level instead of leaving
+         the board unreachable. */
+      ctx.effect(() => {
+        let fallback = false
+        const sync = () => {
+          const rows = ctx.shortcuts.catalog.getSnapshot()
+          const row = Array.isArray(rows)
+            ? rows.find(item => item.id === 'session-triage.board')
+            : undefined
+          fallback = row === undefined || row.binding === null
+        }
+        const onKey = (event) => {
+          if (!fallback || event.defaultPrevented || event.repeat || event.isComposing) return
+          if (event.code !== 'KeyP' || !event.ctrlKey || !event.altKey) return
+          if (event.shiftKey || event.metaKey) return
+          event.preventDefault()
+          event.stopPropagation()
+          toggleBoard()
+        }
+        window.addEventListener('keydown', onKey, true)
+        const dispose = ctx.shortcuts.catalog.subscribe(sync)
+        sync()
+        return () => {
+          window.removeEventListener('keydown', onKey, true)
+          dispose()
+        }
+      }, 'session-triage: board shortcut fallback')
 
       /* One-time migration: older builds shipped Mod+Alt+L. If a profile
          still carries that binding, reset it once to the new P default;
@@ -1669,6 +1698,7 @@ window.__ModuleLoader__.load({
         const boardKeys = boardShortcutEntry !== undefined && Array.isArray(boardShortcutEntry.keys)
           ? boardShortcutEntry.keys.join('+')
           : ''
+        const displayedBoardKeys = boardKeys === '' ? 'Ctrl+Alt+P' : boardKeys
 
         React.useEffect(() => {
           const timer = window.setInterval(() => setNow(Date.now()), 60 * 1000)
@@ -2100,13 +2130,11 @@ window.__ModuleLoader__.load({
                 h('button', {
                   type: 'button',
                   className: 'dsu-shortcut-trigger',
-                  'aria-label': tr('board.shortcut') + ': ' + (boardKeys === '' ? tr('board.shortcut.unbound') : boardKeys),
+                  'aria-label': tr('board.shortcut') + ': ' + displayedBoardKeys,
                   title: tr('board.shortcut.edit'),
                   onClick: openShortcutEditor,
                 },
-                boardKeys === ''
-                  ? h('span', null, tr('board.shortcut.unbound'))
-                  : boardKeys.split('+').map(key => h('kbd', { key }, key)),
+                displayedBoardKeys.split('+').map(key => h('kbd', { key }, key)),
                 h('span', null, tr('board.shortcut.edit'))),
                 hasFilters ? h('button', { type: 'button', className: 'dsu-link', onClick: clearFilters }, tr('board.clearFilters')) : null)),
             h('div', { className: 'dsu-chips' },
@@ -2150,9 +2178,7 @@ window.__ModuleLoader__.load({
                 h('div', null,
                   h('div', { className: 'dsu-shortcut-title' }, tr('board.shortcut')),
                   h('div', { className: 'dsu-shortcut-keys' },
-                    boardKeys === ''
-                      ? tr('board.shortcut.unbound')
-                      : boardKeys.split('+').map(key => h('kbd', { key }, key))),
+                    displayedBoardKeys.split('+').map(key => h('kbd', { key }, key))),
                   h('div', { className: 'dsu-shortcut-hint' }, tr('board.shortcut.hint'))),
                 h('div', { className: 'dsu-shortcut-actions' },
                   h('button', {
