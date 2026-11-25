@@ -1577,6 +1577,37 @@ window.__ModuleLoader__.load({
         return () => { for (const dispose of disposers) dispose() }
       }, 'session-unread: shortcuts')
 
+      /* One-time migration: older builds shipped Mod+Alt+L. If a profile
+         still carries that binding, reset it once to the new P default;
+         an explicit L chosen afterwards is left alone. */
+      ctx.effect(() => {
+        const key = 'dsh.session-triage.board-shortcut-p.v1'
+        try {
+          if (window.localStorage.getItem(key) === '1') return () => {}
+        } catch (_error) {
+          return () => {}
+        }
+        let migrated = false
+        const migrate = () => {
+          if (migrated) return
+          const rows = ctx.shortcuts.catalog.getSnapshot()
+          const row = Array.isArray(rows)
+            ? rows.find(item => item.id === 'session-triage.board')
+            : undefined
+          if (row === undefined || row.binding === null || row.binding.code !== 'KeyL') return
+          try {
+            const snapshot = ctx.shortcuts.config.getSnapshot()
+            if (snapshot.status !== 'ready') return
+            migrated = true
+            window.localStorage.setItem(key, '1')
+            void ctx.shortcuts.edit({ type: 'reset', id: 'session-triage.board' }, snapshot.revision)
+          } catch (_error) { /* leave the old binding in place */ }
+        }
+        const dispose = ctx.shortcuts.catalog.subscribe(migrate)
+        migrate()
+        return dispose
+      }, 'session-triage: migrate legacy board shortcut')
+
       /* Board CSS is injected once; rows reuse the app's theme tokens. */
       ctx.effect(() => {
         const style = document.createElement('style')
