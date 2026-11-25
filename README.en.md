@@ -23,19 +23,13 @@ It is a client-only plugin: it does not read message content, call a model, or m
 
 ## Screenshots
 
-![Session board](docs/triage-board.png)
-
-![Sidebar marks](docs/sidebar.png)
+![Session board](docs/triage-board.zh.png)
 
 The **Processing status** submenu:
 
-![Processing status menu](docs/triage-menu.png)
+![Processing status menu](docs/triage-menu.zh.png)
 
-The hover card explains both unread and status:
-
-![Hover card](docs/hover-card.png)
-
-> The animated demo uses the Chinese UI; the still screenshots below use the English UI. Labels follow DSH's interface language.
+> Screenshots use the Chinese UI with demo data; labels follow DSH's interface language. The animated demo above is also Chinese.
 
 ## Quick start
 
