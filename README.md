@@ -9,6 +9,8 @@
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
 
+![会话看板演示](docs/demo.gif)
+
 DSH 侧栏的原生绿点来自 `UiSession.completionUnread`：会话在后台跑完时亮，点开就消失，没有恢复入口。会话一多、跨几个工作区，回头找结果只能翻列表。
 
 这个插件补三件事：
@@ -21,19 +23,13 @@ DSH 侧栏的原生绿点来自 `UiSession.completionUnread`：会话在后台�
 
 ## 截图
 
-![会话看板](docs/triage-board.png)
-
-![侧栏状态](docs/sidebar.png)
+![会话看板（中文）](docs/triage-board.zh.png)
 
 右键菜单里的「处理状态」子菜单：
 
-![处理状态菜单](docs/triage-menu.png)
+![处理状态菜单（中文）](docs/triage-menu.zh.png)
 
-悬停卡片同时解释未读和状态：
-
-![悬停卡片](docs/hover-card.png)
-
-> 截图为英文界面；插件文案会跟随 DSH 的界面语言切换。
+> 中文界面截图；英文界面截图见 [English](README.en.md)。截图使用示例工作区数据。
 
 ## 快速开始
 
@@ -121,13 +117,13 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 
 `web` 是默认 profile，按你的实际 profile 替换。这个包是纯 JavaScript，没有 build / `prepare` 步骤；`dsh plugin add` 会把 `dsh-session-triage` 追加到 profile 的 `dsh.profile.bundles`。
 
-生产使用建议固定 commit，避免 master 后续推送改变安装内容：
+生产使用建议固定到 release tag，避免 master 后续推送改变安装内容：
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#<commit>"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.5.3"
 ```
 
-把 `<commit>` 换成完整或短 SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
+也可以把 `v0.5.3` 换成完整或短 commit SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
 
 ### 升级
 
