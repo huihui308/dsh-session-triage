@@ -63,6 +63,8 @@ window.__ModuleLoader__.load({
       'settings.description': '未读绿点、处理状态色条；快捷键在「键盘快捷键」里修改。',
       'settings.autoSuggest': '自动建议处理状态',
       'settings.showBars': '显示处理状态色条',
+      'settings.shortcut': '看板快捷键：{keys} · 在「键盘快捷键」里改',
+      'settings.shortcut.unbound': '看板快捷键：未绑定 · 在「键盘快捷键」里录一个',
       'shortcut.nextUnread': '下一个未读会话',
       'shortcut.cycleTriage': '循环当前会话处理状态',
       'shortcut.board': '打开 / 返回会话看板',
@@ -124,6 +126,8 @@ window.__ModuleLoader__.load({
       'settings.description': 'Unread dot and triage bar. Shortcuts are edited under Keyboard shortcuts.',
       'settings.autoSuggest': 'Suggest triage status',
       'settings.showBars': 'Show triage bar',
+      'settings.shortcut': 'Board shortcut: {keys} · change it under Keyboard shortcuts',
+      'settings.shortcut.unbound': 'Board shortcut: not bound · record one under Keyboard shortcuts',
       'shortcut.nextUnread': 'Next unread session',
       'shortcut.cycleTriage': 'Cycle current session triage',
       'shortcut.board': 'Open / leave the session board',
@@ -426,10 +430,17 @@ window.__ModuleLoader__.load({
       return lines.length === 0 ? null : h(React.Fragment, null, ...lines)
     }
 
-    /** Settings -> General row: auto-suggest and triage-bar switches. */
-    function SessionMarkSettings({ t }) {
+    /** Settings -> General row: auto-suggest, triage-bar switches, and the
+        board shortcut as currently bound (rebinding happens in the shared
+        Keyboard shortcuts editor, so this line only points at it). */
+    function SessionMarkSettings({ t, shortcuts }) {
       const current = React.useSyncExternalStore(settings.subscribe, settings.getSnapshot)
+      const subscribeShortcuts = shortcuts === undefined ? (() => () => {}) : shortcuts.catalog.subscribe
+      const readShortcuts = shortcuts === undefined ? (() => []) : shortcuts.catalog.getSnapshot
+      const catalog = React.useSyncExternalStore(subscribeShortcuts, readShortcuts)
       const tr = typeof t === 'function' ? t : (key) => key
+      const boardRow = Array.isArray(catalog) ? catalog.find(row => row.id === 'session-triage.board') : undefined
+      const boardKeys = boardRow === undefined || !Array.isArray(boardRow.keys) ? '' : boardRow.keys.join('')
       const toggle = (label, value, onChange) => h('label', {
         style: {
           display: 'flex', alignItems: 'center', gap: '8px',
@@ -474,7 +485,10 @@ window.__ModuleLoader__.load({
       }, tr('settings.title')),
       h('div', {
         style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary)' },
-      }, tr('settings.description'))),
+      }, tr('settings.description')),
+      h('div', {
+        style: { fontSize: '12px', lineHeight: '18px', color: 'var(--dsw-alias-label-tertiary)' },
+      }, boardKeys === '' ? tr('settings.shortcut.unbound') : tr('settings.shortcut', { keys: boardKeys }))),
       h('div', {
         style: { display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' },
       },
@@ -963,7 +977,7 @@ window.__ModuleLoader__.load({
           id: 'session-unread-settings',
           order: 17,
           locale: NS,
-        }, SessionMarkSettings)
+        }, (props) => h(SessionMarkSettings, { ...props, shortcuts: ctx.shortcuts }))
         return () => { unregister() }
       })
 
