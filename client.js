@@ -1007,7 +1007,7 @@ window.__ModuleLoader__.load({
          spends its three slots (Mod+/, Mod+Shift+, Mod+Shift+.) on core and
          earlier plugin commands, so the default is declared for Desktop and
          Windows/macOS Web only — Linux Web keeps the command, unbound. */
-      const boardBinding = { code: 'KeyD', modifiers: ['primary', 'alt'] }
+      const boardBinding = { code: 'KeyL', modifiers: ['primary', 'alt'] }
       const boardDefaults = {
         'desktop:macos': boardBinding,
         'desktop:windows': boardBinding,
