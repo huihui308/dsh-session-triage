@@ -65,6 +65,7 @@ window.__ModuleLoader__.load({
       'settings.showBars': '显示处理状态色条',
       'shortcut.nextUnread': '下一个未读会话',
       'shortcut.cycleTriage': '循环当前会话处理状态',
+      'shortcut.board': '打开 / 返回会话看板',
       'board.title': '会话看板',
       'board.active': '未闭环 {n}',
       'board.all': '全部',
@@ -125,6 +126,7 @@ window.__ModuleLoader__.load({
       'settings.showBars': 'Show triage bar',
       'shortcut.nextUnread': 'Next unread session',
       'shortcut.cycleTriage': 'Cycle current session triage',
+      'shortcut.board': 'Open / leave the session board',
       'board.title': 'Session board',
       'board.active': '{n} open',
       'board.all': 'All',
@@ -1000,6 +1002,29 @@ window.__ModuleLoader__.load({
           }
         }
       }
+      /* Board command: toggles the cross-workspace board and returns to the
+         panel it covered. Web only admits Mod+Alt on Windows/macOS; Linux Web
+         spends its three slots (Mod+/, Mod+Shift+, Mod+Shift+.) on core and
+         earlier plugin commands, so the default is declared for Desktop and
+         Windows/macOS Web only — Linux Web keeps the command, unbound. */
+      const boardBinding = { code: 'KeyD', modifiers: ['primary', 'alt'] }
+      const boardDefaults = {
+        'desktop:macos': boardBinding,
+        'desktop:windows': boardBinding,
+        'desktop:linux': boardBinding,
+        'web:windows': boardBinding,
+        'web:macos': boardBinding,
+      }
+      /** Panel that the board covered, so the toggle restores it instead of
+          always dumping the user on the Conversation. */
+      let boardReturn = null
+      /** The board commits a frame after selectPanel; retry a few frames so
+          the keyboard lands in the search field instead of nowhere. */
+      const focusBoardSearch = (attempt = 0) => {
+        const search = document.querySelector('.dsu-board .dsu-search')
+        if (search !== null) { search.focus(); return }
+        if (attempt < 8) window.requestAnimationFrame(() => focusBoardSearch(attempt + 1))
+      }
       ctx.effect(() => {
         const disposers = [
           registerShortcut({
@@ -1070,6 +1095,39 @@ window.__ModuleLoader__.load({
                       updatedAt: Date.now(),
                     })
                   }
+                },
+              }
+            },
+          }),
+          registerShortcut({
+            id: 'session-triage.board',
+            label: () => translate()('shortcut.board'),
+            aliases: ['session board', 'board', '会话看板', '看板'],
+            defaults: boardDefaults,
+            regions: ['page', 'editable'],
+            modals: [],
+            resolve: () => {
+              const layout = ctx.layout
+              if (layout === undefined) return { status: 'blocked', reason: 'no-board' }
+              const active = layout.panelInfo.getSnapshot().activePanelId
+              return {
+                status: 'handled',
+                run: () => {
+                  if (active === BOARD_ID) {
+                    clearBoardReload()
+                    const back = boardReturn
+                    boardReturn = null
+                    try { layout.selectPanel(back) } catch (_error) { layout.selectPanel(null) }
+                    return
+                  }
+                  boardReturn = active
+                  try {
+                    layout.selectPanel(BOARD_ID)
+                  } catch (_error) {
+                    boardReturn = null
+                    return
+                  }
+                  window.requestAnimationFrame(() => focusBoardSearch())
                 },
               }
             },

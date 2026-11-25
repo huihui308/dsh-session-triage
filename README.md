@@ -4,7 +4,7 @@
 
 > DSH Web 的会话看板：给会话加未读和红 / 黄 / 绿处理状态，再用一个跨工作区总览页把待处理会话收拢。
 
-![Version](https://img.shields.io/badge/version-0.5.3-4c6fff)
+![Version](https://img.shields.io/badge/version-0.6.0-4c6fff)
 ![License](https://img.shields.io/badge/license-MIT-30a46c)
 ![DSH](https://img.shields.io/badge/DSH-0.2.x-4c6fff)
 ![Platform](https://img.shields.io/badge/platform-DSH%20Web-6b7280)
@@ -81,7 +81,7 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 - **口径**：排除归档、空白 New Session、子会话；绿色默认隐藏。同一会话只进一个组：红 / 等你响应优先，其次黄；运行中如果没显式红 / 黄就进运行中；未读不会把运行中的会话挪走；绿色最后。
 - **筛选**：搜索标题 / 工作区，按分组 chip 或工作区过滤；顶部计数随筛选更新。
 - **快捷点**：行内悬停出现红 / 黄 / 绿快捷点，点一下写入状态，再点同色清除；点行才打开会话，在板上浏览不会打断当前会话。
-- **入口**：侧栏入口可 Pin，也可以像其他面板一样收进 More。
+- **入口**：侧栏入口可 Pin，也可以像其他面板一样收进 More；键盘用 `Ctrl+Alt+D`（macOS `Cmd+Alt+D`）打开，再按一次回到打开前的面板或会话。
 
 ### 设置与快捷键
 
@@ -96,8 +96,10 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 |---|---|---|
 | 下一个未读会话 | `Ctrl+Shift+,`（macOS `Cmd+Shift+,`） | 跳到下一个有未读标记的会话并打开；只有当前会话有标记时不动 |
 | 循环当前会话处理状态 | `Ctrl+Shift+.`（macOS `Cmd+Shift+.`） | 无 → 红 → 黄 → 绿 → 无 |
+| 打开 / 返回会话看板 | `Ctrl+Alt+D`（macOS `Cmd+Alt+D`） | 打开会话看板并聚焦搜索框；再按一次回到打开前的面板 / 会话 |
 
-- Web 端 DSH 只接受少量组合（`Mod+/`、`Mod+Shift+,`、`Mod+Shift+.`）；`Mod+/` 已被「打开键盘快捷键」占用，所以插件默认用后两个。
+- Linux 浏览器的 Web 端 DSH 只接受三个组合（`Mod+/`、`Mod+Shift+,`、`Mod+Shift+.`），都已被占用，所以看板快捷键在 Linux 浏览器里是空的（命令仍在列表，但录不进去）。Windows / macOS 浏览器还接受 `Mod+Alt+字母`，看板默认走这个位子。
+- 前两个命令用 `Mod+Shift+标点`：`Mod+/` 已被「打开键盘快捷键」占用。
 - 快捷键在输入框 / 编辑器聚焦时也生效（`regions: ['page', 'editable']`），因为都是带修饰键的标点组合，不会挡正常输入。
 - 如果默认键在某平台冲突，插件会把这个命令留空（仍出现在快捷键列表里，手动录一个即可），不会让插件加载失败。
 
@@ -120,10 +122,10 @@ dsh plugin --profile web add github:huihui308/dsh-session-triage
 生产使用建议固定到 release tag，避免 master 后续推送改变安装内容：
 
 ```bash
-dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.5.3"
+dsh plugin --profile web add "github:huihui308/dsh-session-triage#v0.6.0"
 ```
 
-也可以把 `v0.5.3` 换成完整或短 commit SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
+也可以把 `v0.6.0` 换成完整或短 commit SHA。安装后刷新页面；如果侧栏没有出现入口，先确认 profile 的 `package.json` 的 bundles 里有 `dsh-session-triage`。
 
 ### 升级
 
