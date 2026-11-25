@@ -1,11 +1,5 @@
 /**
- * dsh-session-triage — Host half.
- *
- * All behavior lives in the browser half (client.js). This no-op Cordis plugin
- * exists so the package is a complete DSH bundle with one Loader entry; the web
- * client module table discovers the browser bundle through package.json's
- * `dsh.client` declaration and exports["./client"].
+ * dsh-session-triage — Host 半片入口。
+ * 状态持久化见 host.js；浏览器半片在 client.js。
  */
-export const name = 'dsh-session-triage'
-export const inject = []
-export function apply() {}
+export { name, inject, apply } from './host.js'
