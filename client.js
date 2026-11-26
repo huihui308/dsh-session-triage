@@ -2012,11 +2012,12 @@ window.__ModuleLoader__.load({
             let group
             // Recovery takes precedence over a manual triage colour: an
             // interrupted run must stay in the batch-resume group even when it
-            // was already marked red or amber.
+            // was already marked red or amber. Running outranks a colour too,
+            // so the top Running count and the visible Running group agree.
             if (interruptedFlag) group = 'interrupted'
+            else if (running) group = 'running'
             else if (pending || level === 'red') group = 'red'
             else if (level === 'amber') group = 'amber'
-            else if (running) group = 'running'
             else if (unreadFlag) group = 'amber'
             else if (level === 'green') {
               if (!showClosed) continue
@@ -2062,15 +2063,22 @@ window.__ModuleLoader__.load({
 
         const counts = React.useMemo(() => {
           const result = { running: 0, red: 0, amber: 0, interrupted: 0, recent: 0, closed: 0 }
-          for (const row of matchingRows) result[row.group] += 1
+          for (const row of matchingRows) {
+            // Running is a state, not a bucket: a running Session with a red or
+            // amber triage mark still counts in the top Running chip.
+            if (row.running) result.running += 1
+            if (row.group !== 'running') result[row.group] += 1
+          }
           return result
         }, [matchingRows])
-        const activeCount = counts.running + counts.red + counts.amber + counts.interrupted + counts.recent
+        const activeCount = matchingRows.filter(row => row.group !== 'closed').length
 
         const filtered = React.useMemo(() => (
           groupFilter === 'all'
             ? matchingRows
-            : matchingRows.filter(row => row.group === groupFilter)
+            : groupFilter === 'running'
+              ? matchingRows.filter(row => row.running)
+              : matchingRows.filter(row => row.group === groupFilter)
         ), [matchingRows, groupFilter])
 
         const calendarDayMap = React.useMemo(() => {
@@ -2467,11 +2475,13 @@ window.__ModuleLoader__.load({
               ? h('div', { className: 'dsu-calendar-empty' }, tr('board.calendarEmpty'))
               : h('div', { className: 'dsu-rows' }, calendarRows.map(renderRow))))
 
-        const groups = GROUP_ORDER
-          .filter(group => group !== 'closed' || showClosed)
-          .map(group => ({ group, rows: groupRows(group) }))
-          .filter(entry => entry.rows.length > 0)
-          .filter(entry => groupFilter === 'all' || entry.group === groupFilter)
+        const groups = groupFilter === 'running'
+          ? (filtered.length === 0 ? [] : [{ group: 'running', rows: filtered }])
+          : GROUP_ORDER
+            .filter(group => group !== 'closed' || showClosed)
+            .map(group => ({ group, rows: groupRows(group) }))
+            .filter(entry => entry.rows.length > 0)
+            .filter(entry => groupFilter === 'all' || entry.group === groupFilter)
 
         return h('div', { className: 'dsu-board' },
           h('div', { className: 'dsu-board-inner' },
