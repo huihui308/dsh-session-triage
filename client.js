@@ -102,6 +102,18 @@ window.__ModuleLoader__.load({
       'board.calendarEmpty': '这一天没有会话',
       'board.calendarCount': '{n} 个',
       'board.calendarWeekdays': '一,二,三,四,五,六,日',
+      'board.resume': '恢复',
+      'board.resumeSelected': '恢复已选',
+      'board.resumeSending': '发送中…',
+      'board.resumeSent': '已发送',
+      'board.resumeFailed': '发送失败',
+      'board.resumeSelect': '选择此会话',
+      'board.resumeSelectAll': '全选中断会话',
+      'board.resumeConfirm': '将向 {n} 个中断会话发送恢复指令，会产生模型调用。',
+      'board.resumeStart': '开始恢复',
+      'board.resumeCancel': '取消',
+      'board.resumeNotice': '已恢复 {ok} 个，失败 {fail} 个',
+      'board.resumePrompt': '你上一次执行被 DSH Web 重启中断了。请先回顾当前会话最后的任务和进度，从断点继续；不要重做已经完成的部分。如果任务其实已经完成，直接说明并结束，不要开启新工作；如果还在等我提供信息，先说明需要什么。',
       'board.all': '全部',
       'board.running': '运行中',
       'board.red': '待我处理',
@@ -218,6 +230,18 @@ window.__ModuleLoader__.load({
       'board.calendarEmpty': 'No sessions on this day',
       'board.calendarCount': '{n}',
       'board.calendarWeekdays': 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+      'board.resume': 'Resume',
+      'board.resumeSelected': 'Resume selected',
+      'board.resumeSending': 'Sending…',
+      'board.resumeSent': 'Sent',
+      'board.resumeFailed': 'Send failed',
+      'board.resumeSelect': 'Select this session',
+      'board.resumeSelectAll': 'Select all interrupted sessions',
+      'board.resumeConfirm': 'Send a resume instruction to {n} interrupted sessions? This starts model calls.',
+      'board.resumeStart': 'Resume',
+      'board.resumeCancel': 'Cancel',
+      'board.resumeNotice': 'Resumed {ok}, failed {fail}',
+      'board.resumePrompt': 'Your previous run was interrupted by a DSH Web restart. Review the last task and progress in this session, then continue from the breakpoint. Do not redo work that is already complete. If the task is actually finished, say so and stop without starting new work. If you are waiting for information from me, state what you need first.',
       'board.all': 'All',
       'board.running': 'Running',
       'board.red': 'Needs me',
@@ -867,6 +891,17 @@ window.__ModuleLoader__.load({
 .dsu-group-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 6px; }
 .dsu-group-name { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; color: var(--dsw-alias-label-tertiary); }
 .dsu-group-count { font-size: 12px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.dsu-resume-check { width: 14px; height: 14px; margin: 0; flex: none; accent-color: var(--dsw-alias-state-warn-primary, #f5a623); cursor: pointer; }
+.dsu-resume-check:disabled { cursor: default; opacity: 0.5; }
+.dsu-group-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.dsu-resume-selected { height: 26px; padding: 0 9px; font-size: 11px; }
+.dsu-resume-btn { flex: none; height: 26px; padding: 0 9px; border: 1px solid rgba(245, 166, 35, 0.42); border-radius: 7px; background: rgba(245, 166, 35, 0.08); color: var(--dsw-alias-state-warn-primary, #f5a623); font: inherit; font-size: 11px; cursor: pointer; }
+.dsu-resume-btn:hover { background: rgba(245, 166, 35, 0.15); }
+.dsu-resume-btn:disabled { cursor: default; opacity: 0.55; }
+.dsu-resume-confirm { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 9px 12px; border: 1px solid rgba(245, 166, 35, 0.28); border-radius: 8px; background: rgba(245, 166, 35, 0.07); }
+.dsu-resume-confirm-text { font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+.dsu-resume-confirm-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.dsu-resume-notice { margin: 0 0 8px; padding: 0 4px; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
 .dsu-rows { border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)); }
 .dsu-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)); border-radius: 8px; cursor: pointer; outline: none; }
 .dsu-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
@@ -1752,6 +1787,10 @@ window.__ModuleLoader__.load({
         const [boardView, setBoardView] = React.useState('list')
         const [calendarMonth, setCalendarMonth] = React.useState(() => localMonthStart(new Date()))
         const [calendarDay, setCalendarDay] = React.useState(() => localDayKey(new Date()))
+        const [resumeSelection, setResumeSelection] = React.useState({})
+        const [resumeBusy, setResumeBusy] = React.useState({})
+        const [resumeConfirm, setResumeConfirm] = React.useState(null)
+        const [resumeNotice, setResumeNotice] = React.useState('')
         const [now, setNow] = React.useState(() => Date.now())
         const shortcutCatalog = useObservable(ctx.shortcuts.catalog)
         const [shortcutOpen, setShortcutOpen] = React.useState(false)
@@ -1972,9 +2011,12 @@ window.__ModuleLoader__.load({
               : interruptedEntry !== undefined ? interruptedEntry.at : now
             const age = now - updatedAt
             let group
-            if (pending || level === 'red') group = 'red'
+            // Recovery takes precedence over a manual triage colour: an
+            // interrupted run must stay in the batch-resume group even when it
+            // was already marked red or amber.
+            if (interruptedFlag) group = 'interrupted'
+            else if (pending || level === 'red') group = 'red'
             else if (level === 'amber') group = 'amber'
-            else if (interruptedFlag) group = 'interrupted'
             else if (running) group = 'running'
             else if (unreadFlag) group = 'amber'
             else if (level === 'green') {
@@ -2165,6 +2207,74 @@ window.__ModuleLoader__.load({
           interrupted.remove(id)
         }
         const groupRows = (group) => filtered.filter(row => row.group === group)
+        const resumeInFlight = Object.values(resumeBusy).some(value => value === 'sending')
+        const resumeOne = async (id, openAfter) => {
+          if (resumeBusy[id] === 'sending') return false
+          setResumeBusy(current => ({ ...current, [id]: 'sending' }))
+          setResumeNotice('')
+          try {
+            if (ctx.sessions === undefined || typeof ctx.sessions.using !== 'function') {
+              throw new Error('session prompt API unavailable')
+            }
+            const result = await ctx.sessions.using(id, { source: 'session-triage.resume' }, async (reference) => {
+              const binding = await reference.ready
+              return binding.session.prompt([{ type: 'text', text: tr('board.resumePrompt') }], 'queue')
+            })
+            if (result === undefined || result === null || result.ok !== true) {
+              const failure = result !== null && result !== undefined && result.ok === false ? result.error : undefined
+              throw new Error(typeof failure?.message === 'string' ? failure.message : 'prompt rejected')
+            }
+            interrupted.remove(id)
+            setResumeBusy(current => ({ ...current, [id]: 'sent' }))
+            if (openAfter) open(id)
+            return true
+          } catch (error) {
+            setResumeBusy(current => ({ ...current, [id]: 'error' }))
+            setResumeNotice(String(error?.message ?? error))
+            return false
+          }
+        }
+        const resumeMany = async (ids) => {
+          setResumeConfirm(null)
+          if (ids.length === 0) return
+          let ok = 0
+          let fail = 0
+          for (const id of ids) {
+            const done = await resumeOne(id, false)
+            if (done) ok += 1
+            else fail += 1
+            if (ids.length > 1) await new Promise(resolve => setTimeout(resolve, 250))
+          }
+          setResumeNotice(tr('board.resumeNotice', { ok, fail }))
+          setResumeSelection(current => {
+            const next = { ...current }
+            for (const id of ids) delete next[id]
+            return next
+          })
+        }
+        const toggleResumeSelection = (id) => {
+          setResumeSelection(current => {
+            const next = { ...current }
+            if (next[id] === true) delete next[id]
+            else next[id] = true
+            return next
+          })
+        }
+        React.useEffect(() => {
+          setResumeSelection(current => {
+            const next = {}
+            for (const [id, selected] of Object.entries(current)) {
+              if (selected === true && interruptedState[id] !== undefined) next[id] = true
+            }
+            return Object.keys(next).length === Object.keys(current).length ? current : next
+          })
+        }, [interruptedState])
+        React.useEffect(() => {
+          if (resumeNotice === '') return undefined
+          const timer = window.setTimeout(() => setResumeNotice(''), 5000)
+          return () => { window.clearTimeout(timer) }
+        }, [resumeNotice])
+
 
         const chip = (id, label, count, dot) => h('button', {
           key: id,
@@ -2206,6 +2316,15 @@ window.__ModuleLoader__.load({
             },
           },
           h('span', { className: 'dsu-row-bar ' + row.bar, 'aria-hidden': 'true' }),
+          row.interrupted ? h('input', {
+            type: 'checkbox',
+            className: 'dsu-resume-check',
+            checked: resumeSelection[row.id] === true,
+            disabled: resumeBusy[row.id] === 'sending',
+            'aria-label': tr('board.resumeSelect'),
+            onClick: (event) => { event.stopPropagation() },
+            onChange: () => { toggleResumeSelection(row.id) },
+          }) : null,
           h('div', { className: 'dsu-row-main' },
             h('div', { className: 'dsu-row-title', title: row.title },
               h('span', { className: 'dsu-row-title-text' }, row.title),
@@ -2221,6 +2340,21 @@ window.__ModuleLoader__.load({
                   title: row.tasks.map(task => task.title).join(' · '),
                 }, '⏱ ' + (row.taskAt === undefined ? tr('schedule.paused') : formatTaskTime(row.taskAt)))))),
           h('div', { className: 'dsu-row-badges' }, badges),
+          row.interrupted ? h('button', {
+            type: 'button',
+            className: 'dsu-resume-btn',
+            disabled: resumeBusy[row.id] === 'sending' || resumeBusy[row.id] === 'sent',
+            onClick: (event) => {
+              event.stopPropagation()
+              void resumeOne(row.id, true)
+            },
+          }, resumeBusy[row.id] === 'sending'
+            ? tr('board.resumeSending')
+            : resumeBusy[row.id] === 'sent'
+              ? tr('board.resumeSent')
+              : resumeBusy[row.id] === 'error'
+                ? tr('board.resumeFailed')
+                : tr('board.resume')) : null,
           h('div', { className: 'dsu-actions' }, LEVEL_IDS.map(level => {
             const pressed = row.level === level
             const title = pressed
@@ -2454,12 +2588,49 @@ window.__ModuleLoader__.load({
                 h('div', { className: 'dsu-empty-title' }, tr(hasFilters ? 'board.noMatch' : 'board.empty')),
                 h('div', { className: 'dsu-empty-hint' }, tr(hasFilters ? 'board.noMatchHint' : 'board.emptyHint')),
                 hasFilters ? h('button', { type: 'button', className: 'dsu-link', onClick: clearFilters }, tr('board.clearFilters')) : null)
-              : groups.map(entry => h('section', { key: entry.group, className: 'dsu-group' },
-                h('div', { className: 'dsu-group-head' },
-                  h('span', { className: 'dsu-dot ' + GROUP_META[entry.group].dot, 'aria-hidden': 'true' }),
-                  h('span', { className: 'dsu-group-name' }, tr(GROUP_META[entry.group].label)),
-                  h('span', { className: 'dsu-group-count' }, String(entry.rows.length))),
-                h('div', { className: 'dsu-rows' }, entry.rows.map(renderRow))))))
+              : groups.map(entry => {
+                const interrupted = entry.group === 'interrupted'
+                const selectedIds = interrupted
+                  ? entry.rows.filter(row => resumeSelection[row.id] === true).map(row => row.id)
+                  : []
+                const allSelected = interrupted && entry.rows.length > 0
+                  && entry.rows.every(row => resumeSelection[row.id] === true)
+                return h('section', { key: entry.group, className: 'dsu-group' },
+                  h('div', { className: 'dsu-group-head' },
+                    interrupted ? h('input', {
+                      type: 'checkbox',
+                      className: 'dsu-resume-check',
+                      checked: allSelected,
+                      'aria-label': tr('board.resumeSelectAll'),
+                      onChange: () => {
+                        setResumeSelection(current => {
+                          const next = { ...current }
+                          for (const row of entry.rows) {
+                            if (allSelected) delete next[row.id]
+                            else next[row.id] = true
+                          }
+                          return next
+                        })
+                      },
+                    }) : null,
+                    h('span', { className: 'dsu-dot ' + GROUP_META[entry.group].dot, 'aria-hidden': 'true' }),
+                    h('span', { className: 'dsu-group-name' }, tr(GROUP_META[entry.group].label)),
+                    h('span', { className: 'dsu-group-count' }, String(entry.rows.length)),
+                    interrupted ? h('div', { className: 'dsu-group-actions' },
+                      h('button', {
+                        type: 'button',
+                        className: 'dsu-btn dsu-resume-selected',
+                        disabled: selectedIds.length === 0 || resumeInFlight,
+                        onClick: () => setResumeConfirm(selectedIds),
+                      }, tr('board.resumeSelected') + (selectedIds.length > 0 ? ' (' + selectedIds.length + ')' : ''))) : null),
+                  interrupted && resumeConfirm !== null ? h('div', { className: 'dsu-resume-confirm' },
+                    h('span', { className: 'dsu-resume-confirm-text' }, tr('board.resumeConfirm', { n: resumeConfirm.length })),
+                    h('div', { className: 'dsu-resume-confirm-actions' },
+                      h('button', { type: 'button', className: 'dsu-btn', onClick: () => setResumeConfirm(null) }, tr('board.resumeCancel')),
+                      h('button', { type: 'button', className: 'dsu-btn primary', onClick: () => { void resumeMany(resumeConfirm) } }, tr('board.resumeStart')))) : null,
+                  interrupted && resumeNotice !== '' ? h('div', { className: 'dsu-resume-notice' }, resumeNotice) : null,
+                  h('div', { className: 'dsu-rows' }, entry.rows.map(renderRow)))
+              })))
       }
 
       /* Main view + sidebar entry; the key is the panel id, so clicking the

@@ -99,6 +99,7 @@ The board collects sessions across workspaces on one page:
 - **Upgrade path**: older versions only wrote localStorage; the first load after upgrading pushes those marks to the host instead of dropping them.
 - **Out of reach**: marks stranded on another origin (for example http before switching to https) cannot be read — same-origin policy — and are not recoverable.
 - **Interrupted runs**: a Session that starts running (including a blank run with no visible turn yet) is recorded; after a restart, one that is no longer running appears under **Ended mid-run** with an *Interrupted* badge. Opening it, letting it run again, or setting red / amber / green clears the mark.
+- **Resume**: each interrupted row has a **Resume** button, and selected rows can be resumed together with **Resume selected**. The instruction asks the agent to confirm the breakpoint and not redo completed work; batch resume runs sequentially after a confirmation.
 - Only "saw the start, never saw the end" counts: a run that finished while the page was alive is not flagged. Nothing is written before the Session list is available, so a still-connecting page cannot clobber the snapshot.
 
 ### Settings and shortcuts
