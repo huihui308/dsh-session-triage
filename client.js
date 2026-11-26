@@ -990,10 +990,12 @@ window.__ModuleLoader__.load({
             || (row !== undefined && row.running === true)
           if (live) continue
           running.remove(id)
-          if (row === undefined || row.blank === true || row.origin === 'subagent' || isArchived(id)) continue
+          if (row === undefined || row.origin === 'subagent' || isArchived(id)) continue
           const updatedAt = typeof row.updatedAt === 'number' ? row.updatedAt : 0
           // A run that ended after our last snapshot finished on its own.
-          if (syncSavedAt > 0 && updatedAt > syncSavedAt + 2000) continue
+          // Blank runs are the exception: they were mid-run before their first
+          // visible turn and must still be surfaced as interrupted.
+          if (row.blank !== true && syncSavedAt > 0 && updatedAt > syncSavedAt + 2000) continue
           interrupted.set(id, {
             title: row.displayTitle || row.title || entry.title || id,
             at: Date.now(),
@@ -1256,7 +1258,7 @@ window.__ModuleLoader__.load({
         const next = new Map()
         for (const id of list.ids) {
           const row = list.byId[id]
-          if (row === undefined || row.blank === true || row.origin === 'subagent') continue
+          if (row === undefined || row.origin === 'subagent') continue
           const status = statusOf(id)
           const isRunning = status !== undefined && status !== null && typeof status.running === 'boolean'
             ? status.running === true
@@ -1716,6 +1718,7 @@ window.__ModuleLoader__.load({
         const statuses = useObservable(ctx.uiSession.sessionStatus)
         const unreadState = useObservable(unread)
         const triageState = useObservable(triage)
+        const runningState = useObservable(running)
         const interruptedState = useObservable(interrupted)
         const scheduleState = useObservable(scheduleStore)
         const [deleteConfirm, setDeleteConfirm] = React.useState(null)
@@ -1929,13 +1932,15 @@ window.__ModuleLoader__.load({
             const row = sessions.byId[id]
             const interruptedEntry = interruptedState[id]
             if (row === undefined || row.origin === 'subagent') continue
-            // A run that died before its first turn is blank; keep it anyway.
-            if (row.blank === true && interruptedEntry === undefined) continue
             if (archived.has(id)) continue
             const status = statuses.get(id)
             const entry = triageState[id]
             const level = entry === undefined ? undefined : entry.level
             const running = row.running === true
+            const recordedRunning = Object.prototype.hasOwnProperty.call(runningState, id)
+            // A run that died before its first turn is blank; keep it when it
+            // is running, recorded as running, or already marked interrupted.
+            if (row.blank === true && interruptedEntry === undefined && !running && !recordedRunning) continue
             const pending = status !== undefined && status.pendingInteraction != null
             const unreadFlag = (status !== undefined && status.completionUnread === true)
               || Object.prototype.hasOwnProperty.call(unreadState, id)
@@ -1981,7 +1986,7 @@ window.__ModuleLoader__.load({
             return b.updatedAt - a.updatedAt
           })
           return rows
-        }, [sessions, workspaces, statuses, unreadState, triageState, interruptedState, taskBySession, now, showClosed, workspaceRows, tr])
+        }, [sessions, workspaces, statuses, unreadState, triageState, runningState, interruptedState, taskBySession, now, showClosed, workspaceRows, tr])
 
         const matchingRows = React.useMemo(() => {
           const needle = query.trim().toLowerCase()

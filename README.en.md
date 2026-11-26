@@ -98,7 +98,7 @@ The board collects sessions across workspaces on one page:
 - **State lives on the host**: unread marks, red / amber / green status, and the last-seen running set are written to `$DSH_HOME/session-triage/state.json` through `/session-triage/state` (host half). localStorage is only a cache. A dsh web restart, an http ↔ https switch, or a different IP / hostname no longer wipes them.
 - **Upgrade path**: older versions only wrote localStorage; the first load after upgrading pushes those marks to the host instead of dropping them.
 - **Out of reach**: marks stranded on another origin (for example http before switching to https) cannot be read — same-origin policy — and are not recoverable.
-- **Interrupted runs**: a Session that starts running is recorded; after a restart, one that is no longer running appears under **Ended mid-run** with an *Interrupted* badge. Opening it, letting it run again, or setting red / amber / green clears the mark.
+- **Interrupted runs**: a Session that starts running (including a blank run with no visible turn yet) is recorded; after a restart, one that is no longer running appears under **Ended mid-run** with an *Interrupted* badge. Opening it, letting it run again, or setting red / amber / green clears the mark.
 - Only "saw the start, never saw the end" counts: a run that finished while the page was alive is not flagged. Nothing is written before the Session list is available, so a still-connecting page cannot clobber the snapshot.
 
 ### Settings and shortcuts
