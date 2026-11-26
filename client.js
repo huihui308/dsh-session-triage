@@ -1064,6 +1064,20 @@ window.__ModuleLoader__.load({
         if (doc.savedAt !== undefined) syncSavedAt = typeof doc.savedAt === 'number' ? doc.savedAt : 0
         const remoteUnread = doc.unread !== null && typeof doc.unread === 'object' ? doc.unread : {}
         const remoteTriage = doc.triage !== null && typeof doc.triage === 'object' ? doc.triage : {}
+        const remoteInterrupted = doc.interrupted !== null && typeof doc.interrupted === 'object' ? doc.interrupted : {}
+        // Interrupted marks are durable host state too. Without adopting them,
+        // a fresh browser or a cleared localStorage loses the group entirely.
+        for (const [id, value] of Object.entries(remoteInterrupted)) {
+          if (value === null || typeof value !== 'object') continue
+          const local = interrupted.get(id)
+          const at = typeof value.at === 'number' && Number.isFinite(value.at) ? value.at : Date.now()
+          if (local === undefined || at > local.at) {
+            interrupted.set(id, {
+              title: typeof value.title === 'string' ? value.title : '',
+              at,
+            })
+          }
+        }
         const hasRemote = Object.keys(remoteUnread).length > 0 || Object.keys(remoteTriage).length > 0
         const remoteSavedAt = typeof doc.savedAt === 'number' ? doc.savedAt : 0
         // A removal has no entry to carry its own timestamp. A local triage
