@@ -36,6 +36,7 @@ window.__ModuleLoader__.load({
     const SETTINGS_KEY = 'dsh.session-unread.settings.v1'
     const RUNNING_KEY = 'dsh.session-triage.running.v1'
     const INTERRUPTED_KEY = 'dsh.session-triage.interrupted.v1'
+    const TRIAGE_STAMP_KEY = 'dsh.session-triage.triage-stamp.v1'
     const SYNC_URL = '/session-triage/state'
     const MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000
     const MAX_ENTRIES = 500
@@ -369,15 +370,16 @@ window.__ModuleLoader__.load({
     }
 
     /** Tiny persisted map: Session id -> value, with a stable snapshot reference. */
-    function createMapStore(key, normalize) {
+    function createMapStore(key, normalize, onLocalChange) {
       let snapshot = Object.freeze(normalize(readJson(key)))
       const listeners = new Set()
       const emit = () => {
         for (const listener of [...listeners]) listener()
       }
-      const commit = (next) => {
+      const commit = (next, local = true) => {
         snapshot = Object.freeze(normalize(next))
         writeRaw(key, JSON.stringify(snapshot))
+        if (local && typeof onLocalChange === 'function') onLocalChange(snapshot)
         emit()
       }
       return {
@@ -399,7 +401,7 @@ window.__ModuleLoader__.load({
           commit(next)
         },
         replace: (next) => {
-          commit(next !== null && typeof next === 'object' ? next : {})
+          commit(next !== null && typeof next === 'object' ? next : {}, false)
         },
         refresh: () => {
           snapshot = Object.freeze(normalize(readJson(key)))
@@ -441,7 +443,14 @@ window.__ModuleLoader__.load({
     }
 
     const unread = createMapStore(UNREAD_KEY, normalizeUnread)
-    const triage = createMapStore(TRIAGE_KEY, normalizeTriage)
+    let triageStamp = (() => {
+      const raw = readJson(TRIAGE_STAMP_KEY)
+      return typeof raw === 'number' && Number.isFinite(raw) ? raw : 0
+    })()
+    const triage = createMapStore(TRIAGE_KEY, normalizeTriage, () => {
+      triageStamp = Date.now()
+      writeRaw(TRIAGE_STAMP_KEY, JSON.stringify(triageStamp))
+    })
     const running = createMapStore(RUNNING_KEY, normalizeRunMap)
     const interrupted = createMapStore(INTERRUPTED_KEY, normalizeRunMap)
     const settings = createSettingsStore()
@@ -1020,10 +1029,23 @@ window.__ModuleLoader__.load({
         const remoteUnread = doc.unread !== null && typeof doc.unread === 'object' ? doc.unread : {}
         const remoteTriage = doc.triage !== null && typeof doc.triage === 'object' ? doc.triage : {}
         const hasRemote = Object.keys(remoteUnread).length > 0 || Object.keys(remoteTriage).length > 0
+        const remoteSavedAt = typeof doc.savedAt === 'number' ? doc.savedAt : 0
+        // A removal has no entry to carry its own timestamp. A local triage
+        // mutation stamp lets a clear made just before a restart win over the
+        // older host copy instead of being resurrected on the next load.
+        const localTriageWins = triageStamp > 0 && triageStamp >= remoteSavedAt
         let migrated = false
         if (hasRemote) {
           unread.replace(remoteUnread)
-          triage.replace(remoteTriage)
+          if (localTriageWins) {
+            migrated = true
+          } else {
+            triage.replace(remoteTriage)
+            if (remoteSavedAt > triageStamp) {
+              triageStamp = remoteSavedAt
+              writeRaw(TRIAGE_STAMP_KEY, JSON.stringify(triageStamp))
+            }
+          }
         } else if (Object.keys(unread.getSnapshot()).length > 0 || Object.keys(triage.getSnapshot()).length > 0) {
           // One-time migration for installs that only ever wrote localStorage.
           migrated = true
