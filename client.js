@@ -91,6 +91,16 @@ window.__ModuleLoader__.load({
       'board.shortcut.failed': '保存失败，请重试',
       'board.active': '未闭环 {n}',
       'board.keyboard': '↑↓ 选择 · Enter 打开',
+      'board.listView': '列表',
+      'board.calendarView': '日历',
+      'board.calendarToday': '今天',
+      'board.calendarMonth': '{year} 年 {month} 月',
+      'board.calendarBasis': '按最后活动时间统计 · 点击日期查看当天会话',
+      'board.calendarDay': '{date} 的会话',
+      'board.calendarDayToday': '今天 · {date}',
+      'board.calendarEmpty': '这一天没有会话',
+      'board.calendarCount': '{n} 个',
+      'board.calendarWeekdays': '一,二,三,四,五,六,日',
       'board.all': '全部',
       'board.running': '运行中',
       'board.red': '待我处理',
@@ -197,6 +207,16 @@ window.__ModuleLoader__.load({
       'board.shortcut.failed': 'Could not save; try again',
       'board.active': '{n} open',
       'board.keyboard': '↑↓ select · Enter open',
+      'board.listView': 'List',
+      'board.calendarView': 'Calendar',
+      'board.calendarToday': 'Today',
+      'board.calendarMonth': '{year}-{month}',
+      'board.calendarBasis': 'Based on last activity · click a day to see sessions',
+      'board.calendarDay': 'Sessions on {date}',
+      'board.calendarDayToday': 'Today · {date}',
+      'board.calendarEmpty': 'No sessions on this day',
+      'board.calendarCount': '{n}',
+      'board.calendarWeekdays': 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       'board.all': 'All',
       'board.running': 'Running',
       'board.red': 'Needs me',
@@ -726,6 +746,22 @@ window.__ModuleLoader__.load({
       closed: { label: 'board.closed', dot: 'green', bar: 'green' },
     }
 
+    const localDayKey = (value) => {
+      const date = value instanceof Date ? value : new Date(value)
+      if (!Number.isFinite(date.getTime())) return ''
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return date.getFullYear() + '-' + month + '-' + day
+    }
+    const localMonthStart = (value) => {
+      const date = value instanceof Date ? value : new Date(value)
+      return new Date(date.getFullYear(), date.getMonth(), 1)
+    }
+    const calendarDayLabel = (key) => {
+      if (typeof key !== 'string' || key.length < 10) return ''
+      return Number(key.slice(5, 7)) + '/' + Number(key.slice(8, 10))
+    }
+
     const BOARD_CSS = `
 .dsu-board, .dsu-board * { box-sizing: border-box; }
 .dsu-board { height: 100%; min-height: 0; overflow: auto; background: var(--dsw-alias-bg-layer-3, #fff); padding: 28px clamp(20px, 5vw, 56px) 64px; color: var(--dsw-alias-label-primary); }
@@ -766,6 +802,34 @@ window.__ModuleLoader__.load({
 .dsu-search:focus { border-color: var(--dsw-alias-state-business-primary, #4c6fff); box-shadow: 0 0 0 2px var(--dsw-focus-ring-color, rgba(76, 111, 255, 0.25)); }
 .dsu-select { height: 36px; max-width: 200px; padding: 0 28px 0 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 8px; background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; }
 .dsu-select option { background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary); }
+.dsu-viewswitch { display: inline-flex; align-items: center; padding: 2px; margin: 0 0 14px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12)); border-radius: 9px; background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04)); }
+.dsu-viewswitch button { height: 28px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-tertiary); font: inherit; font-size: 12px; cursor: pointer; }
+.dsu-viewswitch button:hover { color: var(--dsw-alias-label-secondary); }
+.dsu-viewswitch button.active { background: var(--dsw-alias-bg-layer-1, #fff); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+.dsu-calendar-view { margin-top: 2px; }
+.dsu-calendar { padding: 16px 18px 12px; margin-bottom: 22px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1)); border-radius: 12px; background: var(--dsw-alias-bg-layer-1, #fff); }
+.dsu-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dsu-calendar-title { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--dsw-alias-label-primary); }
+.dsu-calendar-nav { display: flex; align-items: center; gap: 5px; }
+.dsu-calendar-navbtn { width: 28px; height: 28px; padding: 0; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1)); border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary); font: 18px/1 ui-monospace, monospace; cursor: pointer; }
+.dsu-calendar-navbtn:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
+.dsu-calendar-today { height: 28px; padding: 0 10px; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.1)); border-radius: 7px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.dsu-calendar-today:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
+.dsu-calendar-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 0 2px 6px; }
+.dsu-calendar-week span { text-align: center; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.dsu-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.dsu-calendar-cell { position: relative; min-height: 54px; padding: 6px 8px; text-align: left; border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)); border-radius: 8px; background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.025)); color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; }
+.dsu-calendar-cell:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.05)); }
+.dsu-calendar-cell.out-month { opacity: 0.38; }
+.dsu-calendar-cell.today { border-color: var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-calendar-cell.selected { background: rgba(76, 111, 255, 0.11); border-color: var(--dsw-alias-state-business-primary, #4c6fff); box-shadow: inset 0 0 0 1px var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-calendar-num { display: block; font-size: 12px; line-height: 17px; font-variant-numeric: tabular-nums; }
+.dsu-calendar-count { display: block; margin-top: 5px; color: var(--dsw-alias-state-business-primary, #4c6fff); font-size: 10px; line-height: 14px; white-space: nowrap; }
+.dsu-calendar-cell.selected .dsu-calendar-count { color: var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-calendar-basis { margin-top: 10px; padding: 0 2px; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.dsu-calendar-list { margin-top: 0; }
+.dsu-calendar-empty { padding: 26px 16px; text-align: center; color: var(--dsw-alias-label-tertiary); font-size: 12px; border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)); }
+@media (max-width: 720px) { .dsu-calendar { padding: 12px; } .dsu-calendar-cell { min-height: 46px; padding: 4px 5px; } .dsu-calendar-count { font-size: 9px; } .dsu-calendar-navbtn { width: 25px; } }
 .dsu-toggle { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 13px; cursor: pointer; }
 .dsu-toggle:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
 .dsu-toggle .dsu-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.18)); border-radius: 4px; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-inverse, #fff); }
@@ -1660,6 +1724,9 @@ window.__ModuleLoader__.load({
         const [groupFilter, setGroupFilter] = React.useState('all')
         const [showClosed, setShowClosed] = React.useState(false)
         const [selectedSessionId, setSelectedSessionId] = React.useState(null)
+        const [boardView, setBoardView] = React.useState('list')
+        const [calendarMonth, setCalendarMonth] = React.useState(() => localMonthStart(new Date()))
+        const [calendarDay, setCalendarDay] = React.useState(() => localDayKey(new Date()))
         const [now, setNow] = React.useState(() => Date.now())
         const shortcutCatalog = useObservable(ctx.shortcuts.catalog)
         const [shortcutOpen, setShortcutOpen] = React.useState(false)
@@ -1938,6 +2005,73 @@ window.__ModuleLoader__.load({
             : matchingRows.filter(row => row.group === groupFilter)
         ), [matchingRows, groupFilter])
 
+        const calendarDayMap = React.useMemo(() => {
+          const map = new Map()
+          for (const row of filtered) {
+            const key = localDayKey(row.updatedAt)
+            if (key === '') continue
+            const rows = map.get(key)
+            if (rows === undefined) map.set(key, [row])
+            else rows.push(row)
+          }
+          return map
+        }, [filtered])
+
+        const todayKey = localDayKey(now)
+        const calendarCells = React.useMemo(() => {
+          const first = calendarMonth
+          const offset = (first.getDay() + 6) % 7
+          const start = new Date(first.getFullYear(), first.getMonth(), 1 - offset)
+          return Array.from({ length: 42 }, (_, index) => {
+            const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)
+            const key = localDayKey(date)
+            const rows = calendarDayMap.get(key)
+            return {
+              key,
+              date,
+              count: rows === undefined ? 0 : rows.length,
+              inMonth: date.getMonth() === first.getMonth(),
+              today: key === todayKey,
+            }
+          })
+        }, [calendarMonth, calendarDayMap, todayKey])
+
+        const calendarRows = calendarDayMap.get(calendarDay) || []
+        const calendarMonthLabel = tr('board.calendarMonth', {
+          year: calendarMonth.getFullYear(),
+          month: calendarMonth.getMonth() + 1,
+        })
+        const calendarDayTitle = calendarDay === todayKey
+          ? tr('board.calendarDayToday', { date: calendarDayLabel(calendarDay) })
+          : tr('board.calendarDay', { date: calendarDayLabel(calendarDay) })
+        const openCalendar = () => {
+          const today = new Date()
+          setBoardView('calendar')
+          setCalendarMonth(localMonthStart(today))
+          setCalendarDay(localDayKey(today))
+        }
+        const moveCalendarMonth = (delta) => {
+          const next = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1)
+          const day = Number(calendarDay.slice(8, 10))
+          const daysInMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+          setCalendarMonth(next)
+          if (Number.isFinite(day) && day > 0) {
+            setCalendarDay(localDayKey(new Date(next.getFullYear(), next.getMonth(), Math.min(day, daysInMonth))))
+          }
+        }
+        const goCalendarToday = () => {
+          const today = new Date()
+          setCalendarMonth(localMonthStart(today))
+          setCalendarDay(localDayKey(today))
+        }
+        const chooseCalendarDay = (cell) => {
+          setCalendarDay(cell.key)
+          if (!cell.inMonth) setCalendarMonth(localMonthStart(cell.date))
+        }
+        React.useEffect(() => {
+          if (groupFilter === 'schedule' && boardView === 'calendar') setBoardView('list')
+        }, [groupFilter, boardView])
+
         const hasFilters = query.trim() !== '' || workspaceFilter !== 'all' || groupFilter !== 'all' || showClosed
         const clearFilters = () => {
           setQuery('')
@@ -2126,6 +2260,53 @@ window.__ModuleLoader__.load({
               }, true)))
         }
 
+        const renderCalendar = () => h('div', { className: 'dsu-calendar-view' },
+          h('div', { className: 'dsu-calendar' },
+            h('div', { className: 'dsu-calendar-head' },
+              h('div', { className: 'dsu-calendar-title' }, calendarMonthLabel),
+              h('div', { className: 'dsu-calendar-nav' },
+                h('button', {
+                  type: 'button',
+                  className: 'dsu-calendar-navbtn',
+                  'aria-label': tr('board.calendarView'),
+                  onClick: () => moveCalendarMonth(-1),
+                }, '‹'),
+                h('button', {
+                  type: 'button',
+                  className: 'dsu-calendar-today',
+                  onClick: goCalendarToday,
+                }, tr('board.calendarToday')),
+                h('button', {
+                  type: 'button',
+                  className: 'dsu-calendar-navbtn',
+                  'aria-label': tr('board.calendarView'),
+                  onClick: () => moveCalendarMonth(1),
+                }, '›'))),
+            h('div', { className: 'dsu-calendar-week' },
+              tr('board.calendarWeekdays').split(',').map(day => h('span', { key: day }, day))),
+            h('div', { className: 'dsu-calendar-grid' },
+              calendarCells.map(cell => h('button', {
+                key: cell.key,
+                type: 'button',
+                className: 'dsu-calendar-cell'
+                  + (cell.inMonth ? '' : ' out-month')
+                  + (cell.today ? ' today' : '')
+                  + (cell.key === calendarDay ? ' selected' : ''),
+                'aria-label': tr('board.calendarDay', { date: calendarDayLabel(cell.key) }),
+                'aria-pressed': cell.key === calendarDay,
+                onClick: () => chooseCalendarDay(cell),
+              },
+              h('span', { className: 'dsu-calendar-num' }, String(cell.date.getDate())),
+              cell.count === 0 ? null : h('span', { className: 'dsu-calendar-count' }, tr('board.calendarCount', { n: cell.count }))))),
+            h('div', { className: 'dsu-calendar-basis' }, tr('board.calendarBasis'))),
+          h('section', { className: 'dsu-group dsu-calendar-list' },
+            h('div', { className: 'dsu-group-head' },
+              h('span', { className: 'dsu-group-name' }, calendarDayTitle),
+              h('span', { className: 'dsu-group-count' }, String(calendarRows.length))),
+            calendarRows.length === 0
+              ? h('div', { className: 'dsu-calendar-empty' }, tr('board.calendarEmpty'))
+              : h('div', { className: 'dsu-rows' }, calendarRows.map(renderRow))))
+
         const groups = GROUP_ORDER
           .filter(group => group !== 'closed' || showClosed)
           .map(group => ({ group, rows: groupRows(group) }))
@@ -2185,6 +2366,19 @@ window.__ModuleLoader__.load({
               },
               h('span', { className: 'dsu-check', 'aria-hidden': 'true' }, showClosed ? '✓' : ''),
               h('span', null, tr('board.showClosed') + (showClosed ? ' (' + counts.closed + ')' : '')))),
+            h('div', { className: 'dsu-viewswitch', role: 'group' },
+              h('button', {
+                type: 'button',
+                className: boardView === 'list' ? 'active' : '',
+                'aria-pressed': boardView === 'list',
+                onClick: () => setBoardView('list'),
+              }, tr('board.listView')),
+              h('button', {
+                type: 'button',
+                className: boardView === 'calendar' ? 'active' : '',
+                'aria-pressed': boardView === 'calendar',
+                onClick: openCalendar,
+              }, tr('board.calendarView'))),
             shortcutOpen ? h('div', { className: 'dsu-shortcut-panel' },
               h('div', { className: 'dsu-shortcut-row' },
                 h('div', null,
@@ -2215,7 +2409,9 @@ window.__ModuleLoader__.load({
               shortcutError === '' ? null : h('div', { className: 'dsu-shortcut-error' }, shortcutError),
               shortcutNotice === '' ? null : h('div', { className: 'dsu-shortcut-notice' }, shortcutNotice))
             : null,
-            groupFilter === 'schedule'
+            boardView === 'calendar' && groupFilter !== 'schedule'
+              ? renderCalendar()
+              : groupFilter === 'schedule'
               ? h('div', { className: 'dsu-sched-list' },
                 scheduleState.notice === '' ? null : h('div', { className: 'dsu-sched-notice' }, scheduleState.notice),
                 scheduleState.status === 'unavailable'

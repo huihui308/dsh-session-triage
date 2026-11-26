@@ -82,6 +82,7 @@ The board collects sessions across workspaces on one page:
 - **Filters**: search title or workspace, filter by group chip or workspace. Counts follow the current filter.
 - **Quick dots**: hover a row to reveal red / amber / green dots. Click to set, click the same color again to clear. Click the row itself to open the session; browsing the board does not interrupt the current session.
 - **Keyboard**: use `↑` / `↓` to select a session and `Enter` to open it.
+- **Calendar view**: switch between **List / Calendar**; the month grid shows session counts per day, and clicking a day lists its sessions.
 - **Entry**: the sidebar entry can be pinned, or tucked under **More** like other panels. From the keyboard, `Ctrl+Alt+L` (macOS `Cmd+Alt+L`) opens the board; press it again to return to the panel or session you came from. You can also change it from **Change** in the board header.
 
 ### Scheduled tasks on the board
