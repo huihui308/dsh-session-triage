@@ -1035,11 +1035,10 @@ window.__ModuleLoader__.load({
           if (live) continue
           running.remove(id)
           if (row === undefined || row.origin === 'subagent' || isArchived(id)) continue
-          const updatedAt = typeof row.updatedAt === 'number' ? row.updatedAt : 0
-          // A run that ended after our last snapshot finished on its own.
-          // Blank runs are the exception: they were mid-run before their first
-          // visible turn and must still be surfaced as interrupted.
-          if (row.blank !== true && syncSavedAt > 0 && updatedAt > syncSavedAt + 2000) continue
+          // A run that was recorded as running and is no longer live was
+          // interrupted. Do not use row.updatedAt to guess that it finished on
+          // its own: a restart updates it after the saved snapshot, which is
+          // exactly the case this recovery is meant to catch.
           interrupted.set(id, {
             title: row.displayTitle || row.title || entry.title || id,
             at: Date.now(),
