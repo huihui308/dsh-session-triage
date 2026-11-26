@@ -90,6 +90,7 @@ window.__ModuleLoader__.load({
       'board.shortcut.conflict': '已被其他命令占用：{conflicts}',
       'board.shortcut.failed': '保存失败，请重试',
       'board.active': '未闭环 {n}',
+      'board.keyboard': '↑↓ 选择 · Enter 打开',
       'board.all': '全部',
       'board.running': '运行中',
       'board.red': '待我处理',
@@ -195,6 +196,7 @@ window.__ModuleLoader__.load({
       'board.shortcut.conflict': 'Already used by: {conflicts}',
       'board.shortcut.failed': 'Could not save; try again',
       'board.active': '{n} open',
+      'board.keyboard': '↑↓ select · Enter open',
       'board.all': 'All',
       'board.running': 'Running',
       'board.red': 'Needs me',
@@ -796,6 +798,9 @@ window.__ModuleLoader__.load({
 .dsu-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08)); border-radius: 8px; cursor: pointer; outline: none; }
 .dsu-row:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04)); }
 .dsu-row:focus-visible { box-shadow: inset 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary, #4c6fff)); }
+.dsu-row.selected { background: var(--dsw-alias-interactive-bg-active, rgba(76, 111, 255, 0.10)); box-shadow: inset 0 0 0 1px var(--dsw-alias-state-business-primary, #4c6fff); }
+.dsu-row.selected:hover { background: var(--dsw-alias-interactive-bg-active, rgba(76, 111, 255, 0.14)); }
+.dsu-kbd-hint { color: var(--dsw-alias-label-tertiary); font-size: 11px; white-space: nowrap; }
 .dsu-row-bar { width: 4px; align-self: stretch; min-height: 28px; margin: 6px 0 6px 8px; border-radius: 2px; background: transparent; flex: none; }
 .dsu-row-bar.running { background: var(--dsw-alias-state-business-primary, #4c6fff); }
 .dsu-row-bar.red { background: var(--dsw-alias-state-error-primary, #e5484d); }
@@ -1654,6 +1659,7 @@ window.__ModuleLoader__.load({
         const [workspaceFilter, setWorkspaceFilter] = React.useState('all')
         const [groupFilter, setGroupFilter] = React.useState('all')
         const [showClosed, setShowClosed] = React.useState(false)
+        const [selectedSessionId, setSelectedSessionId] = React.useState(null)
         const [now, setNow] = React.useState(() => Date.now())
         const shortcutCatalog = useObservable(ctx.shortcuts.catalog)
         const [shortcutOpen, setShortcutOpen] = React.useState(false)
@@ -1945,6 +1951,44 @@ window.__ModuleLoader__.load({
             void Promise.resolve(ctx.uiWorkspace.openSession(id)).catch(() => {})
           } catch (_error) { /* the row stays open on failure */ }
         }
+        React.useEffect(() => {
+          if (selectedSessionId === null) return
+          if (!filtered.some(row => row.id === selectedSessionId)) setSelectedSessionId(null)
+        }, [filtered, selectedSessionId])
+
+        React.useEffect(() => {
+          const onKey = (event) => {
+            if (event.defaultPrevented || event.repeat || event.isComposing) return
+            if (event.ctrlKey || event.metaKey || event.altKey || shortcutRecording) return
+            const board = document.querySelector('.dsu-board')
+            if (board === null) return
+            const target = event.target
+            if (target instanceof Element && target.closest('select')) return
+            const key = event.key
+            if (key !== 'ArrowDown' && key !== 'ArrowUp' && key !== 'Enter') return
+            const rows = [...board.querySelectorAll('[data-session-id]')]
+            if (rows.length === 0) return
+            const ids = rows.map(node => node.getAttribute('data-session-id'))
+            if (key === 'Enter') {
+              if (target instanceof Element && target.closest('button, a, select')) return
+              if (selectedSessionId === null || !ids.includes(selectedSessionId)) return
+              event.preventDefault()
+              event.stopPropagation()
+              open(selectedSessionId)
+              return
+            }
+            event.preventDefault()
+            event.stopPropagation()
+            const current = ids.indexOf(selectedSessionId)
+            const next = current < 0
+              ? (key === 'ArrowDown' ? 0 : ids.length - 1)
+              : (current + (key === 'ArrowDown' ? 1 : -1) + ids.length) % ids.length
+            setSelectedSessionId(ids[next])
+            rows[next].scrollIntoView({ block: 'nearest' })
+          }
+          window.addEventListener('keydown', onKey, true)
+          return () => window.removeEventListener('keydown', onKey, true)
+        }, [selectedSessionId, shortcutRecording, filtered])
         const setLevel = (id, level) => {
           const entry = triage.get(id)
           if (entry !== undefined && entry.level === level) {
@@ -1986,7 +2030,7 @@ window.__ModuleLoader__.load({
           }
           return h('div', {
             key: row.id,
-            className: 'dsu-row',
+            className: 'dsu-row' + (selectedSessionId === row.id ? ' selected' : ''),
             role: 'button',
             tabIndex: 0,
             'data-session-id': row.id,
@@ -2093,7 +2137,7 @@ window.__ModuleLoader__.load({
             h('div', { className: 'dsu-head' },
               h('div', null,
                 h('h1', { className: 'dsu-title' }, tr('board.title')),
-                h('div', { className: 'dsu-sub' }, tr('board.active', { n: activeCount }))),
+                h('div', { className: 'dsu-sub' }, tr('board.active', { n: activeCount }), h('span', { className: 'dsu-kbd-hint' }, '  ' + tr('board.keyboard')))),
               h('div', { className: 'dsu-head-actions' },
                 h('button', {
                   type: 'button',

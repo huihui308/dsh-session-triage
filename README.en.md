@@ -81,6 +81,7 @@ The board collects sessions across workspaces on one page:
 - **Rules**: archived, blank New Session, and subagent sessions are excluded. Settled sessions are hidden by default. A session belongs to exactly one group: red / waiting first, then amber; a running session without an explicit red/amber status goes to Running; unread does not move a running session; settled comes last.
 - **Filters**: search title or workspace, filter by group chip or workspace. Counts follow the current filter.
 - **Quick dots**: hover a row to reveal red / amber / green dots. Click to set, click the same color again to clear. Click the row itself to open the session; browsing the board does not interrupt the current session.
+- **Keyboard**: use `↑` / `↓` to select a session and `Enter` to open it.
 - **Entry**: the sidebar entry can be pinned, or tucked under **More** like other panels. From the keyboard, `Ctrl+Alt+L` (macOS `Cmd+Alt+L`) opens the board; press it again to return to the panel or session you came from. You can also change it from **Change** in the board header.
 
 ### Scheduled tasks on the board
