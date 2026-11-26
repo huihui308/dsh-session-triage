@@ -32,6 +32,7 @@ window.__ModuleLoader__.load({
 
     const NS = 'session-unread'
     const UNREAD_KEY = 'dsh.session-unread.v1'
+    const SEEN_KEY = 'dsh.session-triage.seen.v1'
     const TRIAGE_KEY = 'dsh.session-triage.v1'
     const SETTINGS_KEY = 'dsh.session-unread.settings.v1'
     const RUNNING_KEY = 'dsh.session-triage.running.v1'
@@ -467,6 +468,7 @@ window.__ModuleLoader__.load({
     }
 
     const unread = createMapStore(UNREAD_KEY, normalizeUnread)
+    const seen = createMapStore(SEEN_KEY, normalizeUnread)
     let triageStamp = (() => {
       const raw = readJson(TRIAGE_STAMP_KEY)
       return typeof raw === 'number' && Number.isFinite(raw) ? raw : 0
@@ -1269,6 +1271,14 @@ window.__ModuleLoader__.load({
         return () => { for (const dispose of disposers) dispose() }
       }, 'session-unread: status revisions')
 
+      /* A local read timestamp also suppresses the host's completionUnread
+         flag, which can stay true after the local unread mark is removed. */
+      const markSeen = (sessionId) => {
+        if (typeof sessionId !== 'string' || sessionId === '') return
+        seen.set(sessionId, Date.now())
+        unread.remove(sessionId)
+      }
+
       /* Opening a marked session clears unread; marking the already-open
          session does not, because no selection transition happens. */
       let previousCurrent
@@ -1276,7 +1286,7 @@ window.__ModuleLoader__.load({
         const next = currentSessionId(ctx.sessions.list.getSnapshot())
         const changed = next !== undefined && next !== previousCurrent
         if (changed) {
-          if (unread.has(next)) unread.remove(next)
+          markSeen(next)
           /* A Session that was already open when the process died must keep its
              interrupted mark; only actually opening it again clears it. */
           if (previousCurrent !== undefined && interrupted.has(next)) interrupted.remove(next)
@@ -1335,7 +1345,10 @@ window.__ModuleLoader__.load({
           const entry = triage.getSnapshot()[id]
           if (entry !== undefined && entry !== null && entry.level === 'green') continue
           if (boardActive || current !== id) {
-            if (!unread.has(id)) unread.set(id, Date.now())
+            if (!unread.has(id)) {
+              seen.remove(id)
+              unread.set(id, Date.now())
+            }
           }
         }
         previousRuns = next
@@ -1355,6 +1368,7 @@ window.__ModuleLoader__.load({
         if (typeof window === 'undefined') return
         const onStorage = (event) => {
           if (event.key === UNREAD_KEY) unread.refresh()
+          if (event.key === SEEN_KEY) seen.refresh()
           if (event.key === TRIAGE_KEY) triage.refresh()
           if (event.key === SETTINGS_KEY) settings.refresh()
         }
@@ -1474,8 +1488,11 @@ window.__ModuleLoader__.load({
             label: t(marked ? 'menu.unmark' : 'menu.mark'),
             icon: { key: 'session-unread.dot' },
             run: () => {
-              if (marked) unread.remove(sessionId)
-              else unread.set(sessionId, Date.now())
+              if (marked) markSeen(sessionId)
+              else {
+                seen.remove(sessionId)
+                unread.set(sessionId, Date.now())
+              }
             },
           }]
         },
@@ -1774,6 +1791,7 @@ window.__ModuleLoader__.load({
         const statuses = useObservable(ctx.uiSession.sessionStatus)
         const unreadState = useObservable(unread)
         const triageState = useObservable(triage)
+        const seenState = useObservable(seen)
         const runningState = useObservable(running)
         const interruptedState = useObservable(interrupted)
         const scheduleState = useObservable(scheduleStore)
@@ -2002,12 +2020,14 @@ window.__ModuleLoader__.load({
             // is running, recorded as running, or already marked interrupted.
             if (row.blank === true && interruptedEntry === undefined && !running && !recordedRunning) continue
             const pending = status !== undefined && status.pendingInteraction != null
-            const unreadFlag = (status !== undefined && status.completionUnread === true)
-              || Object.prototype.hasOwnProperty.call(unreadState, id)
-            const interruptedFlag = interruptedEntry !== undefined && !running
             const updatedAt = typeof row.updatedAt === 'number'
               ? row.updatedAt
               : interruptedEntry !== undefined ? interruptedEntry.at : now
+            const seenAt = seenState[id]
+            const unreadFlag = ((status !== undefined && status.completionUnread === true)
+              || Object.prototype.hasOwnProperty.call(unreadState, id))
+              && !(typeof seenAt === 'number' && updatedAt <= seenAt)
+            const interruptedFlag = interruptedEntry !== undefined && !running
             const age = now - updatedAt
             let group
             // Recovery takes precedence over a manual triage colour: an
@@ -2050,7 +2070,7 @@ window.__ModuleLoader__.load({
             return b.updatedAt - a.updatedAt
           })
           return rows
-        }, [sessions, workspaces, statuses, unreadState, triageState, runningState, interruptedState, taskBySession, now, showClosed, workspaceRows, tr])
+        }, [sessions, workspaces, statuses, unreadState, triageState, seenState, runningState, interruptedState, taskBySession, now, showClosed, workspaceRows, tr])
 
         const matchingRows = React.useMemo(() => {
           const needle = query.trim().toLowerCase()
@@ -2156,6 +2176,7 @@ window.__ModuleLoader__.load({
           setShowClosed(false)
         }
         const open = (id) => {
+          markSeen(id)
           clearBoardReload()
           try {
             void Promise.resolve(ctx.uiWorkspace.openSession(id)).catch(() => {})
