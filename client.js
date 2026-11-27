@@ -1088,6 +1088,7 @@ window.__ModuleLoader__.load({
         let migrated = false
         if (hasRemote) {
           unread.replace(remoteUnread)
+          for (const id of Object.keys(interrupted.getSnapshot())) unread.remove(id)
           if (localTriageWins) {
             migrated = true
           } else {
@@ -1335,6 +1336,7 @@ window.__ModuleLoader__.load({
         let changed = false
         for (const [id, entry] of entries) {
           interrupted.set(id, { title: entry.title || id, at: now })
+          unread.remove(id)
           changed = true
         }
         if (changed) schedulePush()
@@ -1375,13 +1377,17 @@ window.__ModuleLoader__.load({
               running.set(id, { title, at: Date.now() })
             }
             if (interrupted.has(id)) interrupted.remove(id)
+            if (unread.has(id)) unread.remove(id)
           } else if (adopted && running.has(id)) {
             running.remove(id)
           }
           if (previousRuns === null) continue
           if (previousRuns.get(id) !== true || isRunning) continue
           if (isArchived(id)) continue
-          if (interrupted.has(id)) continue
+          if (interrupted.has(id)) {
+            if (unread.has(id)) unread.remove(id)
+            continue
+          }
           const entry = triage.getSnapshot()[id]
           if (entry !== undefined && entry !== null && entry.level === 'green') continue
           if (boardActive || current !== id) {
@@ -2080,10 +2086,11 @@ window.__ModuleLoader__.load({
               ? row.updatedAt
               : interruptedEntry !== undefined ? interruptedEntry.at : now
             const seenAt = seenState[id]
-            const unreadFlag = ((status !== undefined && status.completionUnread === true)
-              || Object.prototype.hasOwnProperty.call(unreadState, id))
-              && !(typeof seenAt === 'number' && updatedAt <= seenAt)
             const interruptedFlag = interruptedEntry !== undefined && !running
+            const unreadFlag = !interruptedFlag && !running
+              && ((status !== undefined && status.completionUnread === true)
+                || Object.prototype.hasOwnProperty.call(unreadState, id))
+              && !(typeof seenAt === 'number' && updatedAt <= seenAt)
             const age = now - updatedAt
             let group
             // Recovery takes precedence over a manual triage colour: an
