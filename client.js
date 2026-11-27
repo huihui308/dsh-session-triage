@@ -478,6 +478,7 @@ window.__ModuleLoader__.load({
       writeRaw(TRIAGE_STAMP_KEY, JSON.stringify(triageStamp))
     })
     const running = createMapStore(RUNNING_KEY, normalizeRunMap)
+    const recentRunning = new Map()
     const interrupted = createMapStore(INTERRUPTED_KEY, normalizeRunMap)
     const settings = createSettingsStore()
 
@@ -1326,9 +1327,14 @@ window.__ModuleLoader__.load({
         }
       }
       const markRunningInterrupted = () => {
+        const now = Date.now()
+        const entries = new Map(Object.entries(running.getSnapshot()))
+        for (const [id, entry] of recentRunning) {
+          if (!entries.has(id) && now - entry.at < 60000) entries.set(id, entry)
+        }
         let changed = false
-        for (const [id, entry] of Object.entries(running.getSnapshot())) {
-          interrupted.set(id, { title: entry.title || id, at: Date.now() })
+        for (const [id, entry] of entries) {
+          interrupted.set(id, { title: entry.title || id, at: now })
           changed = true
         }
         if (changed) schedulePush()
@@ -1363,8 +1369,10 @@ window.__ModuleLoader__.load({
           if (!connected) continue
           /* Keep the last-seen running set for the next load to compare against. */
           if (isRunning) {
+            const title = row.displayTitle || row.title || id
+            recentRunning.set(id, { title, at: Date.now() })
             if (!running.has(id)) {
-              running.set(id, { title: row.displayTitle || row.title || id, at: Date.now() })
+              running.set(id, { title, at: Date.now() })
             }
             if (interrupted.has(id)) interrupted.remove(id)
           } else if (adopted && running.has(id)) {
