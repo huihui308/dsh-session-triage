@@ -1325,6 +1325,14 @@ window.__ModuleLoader__.load({
           return false
         }
       }
+      const markRunningInterrupted = () => {
+        let changed = false
+        for (const [id, entry] of Object.entries(running.getSnapshot())) {
+          interrupted.set(id, { title: entry.title || id, at: Date.now() })
+          changed = true
+        }
+        if (changed) schedulePush()
+      }
       const syncRuns = () => {
         let list
         try {
@@ -1335,6 +1343,11 @@ window.__ModuleLoader__.load({
         if (list.ids.length === 0) return
         const current = currentSessionId(list)
         const boardActive = boardIsActive()
+        let connected = true
+        try {
+          const connection = typeof ctx.get === 'function' ? ctx.get('connection') : undefined
+          connected = connection?.generation?.getSnapshot() !== undefined
+        } catch (_error) { /* connection service unavailable */ }
         const next = new Map()
         for (const id of list.ids) {
           const row = list.byId[id]
@@ -1344,6 +1357,10 @@ window.__ModuleLoader__.load({
             ? status.running === true
             : row.running === true
           next.set(id, isRunning)
+          /* While the transport is down the Host cannot tell us that a run
+             ended naturally. Preserve the running snapshot and let the
+             connection-reset effect mark it interrupted. */
+          if (!connected) continue
           /* Keep the last-seen running set for the next load to compare against. */
           if (isRunning) {
             if (!running.has(id)) {
@@ -1356,6 +1373,7 @@ window.__ModuleLoader__.load({
           if (previousRuns === null) continue
           if (previousRuns.get(id) !== true || isRunning) continue
           if (isArchived(id)) continue
+          if (interrupted.has(id)) continue
           const entry = triage.getSnapshot()[id]
           if (entry !== undefined && entry !== null && entry.level === 'green') continue
           if (boardActive || current !== id) {
@@ -1376,6 +1394,22 @@ window.__ModuleLoader__.load({
           disposeStatus()
         }
       }, 'session-unread: fallback completion unread')
+      ctx.effect(() => {
+        let generation
+        try {
+          const connection = typeof ctx.get === 'function' ? ctx.get('connection') : undefined
+          generation = connection?.generation
+        } catch (_error) { /* connection service unavailable */ }
+        if (generation === undefined || typeof generation.subscribe !== 'function') return
+        let previous = generation.getSnapshot()?.id
+        const onChange = () => {
+          const current = generation.getSnapshot()?.id
+          if (previous !== undefined && current !== previous) markRunningInterrupted()
+          previous = current
+        }
+        const dispose = generation.subscribe(onChange)
+        return dispose
+      }, 'session-triage: mark running interrupted on connection reset')
 
       /* Another tab's mark arrives through the storage event. */
       ctx.effect(() => {
