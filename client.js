@@ -495,6 +495,7 @@ window.__ModuleLoader__.load({
     const boardState = () => ({
       version: 1,
       unread: unread.getSnapshot(),
+      seen: seen.getSnapshot(),
       triage: triage.getSnapshot(),
       running: running.getSnapshot(),
       interrupted: interrupted.getSnapshot(),
@@ -1064,8 +1065,16 @@ window.__ModuleLoader__.load({
         }
         if (doc.savedAt !== undefined) syncSavedAt = typeof doc.savedAt === 'number' ? doc.savedAt : 0
         const remoteUnread = doc.unread !== null && typeof doc.unread === 'object' ? doc.unread : {}
+        const remoteSeen = doc.seen !== null && typeof doc.seen === 'object' ? doc.seen : {}
         const remoteTriage = doc.triage !== null && typeof doc.triage === 'object' ? doc.triage : {}
         const remoteInterrupted = doc.interrupted !== null && typeof doc.interrupted === 'object' ? doc.interrupted : {}
+        // Read timestamps belong to the host too, otherwise opening a session
+        // on one origin/device does not clear the host unread on another.
+        for (const [id, at] of Object.entries(remoteSeen)) {
+          if (typeof at !== 'number' || !Number.isFinite(at)) continue
+          const local = seen.get(id)
+          if (local === undefined || at > local) seen.set(id, at)
+        }
         // Interrupted marks are durable host state too. Without adopting them,
         // a fresh browser or a cleared localStorage loses the group entirely.
         for (const [id, value] of Object.entries(remoteInterrupted)) {
@@ -1221,6 +1230,7 @@ window.__ModuleLoader__.load({
       ctx.effect(() => {
         const disposers = [
           unread.subscribe(schedulePush),
+          seen.subscribe(schedulePush),
           triage.subscribe(schedulePush),
           running.subscribe(schedulePush),
           interrupted.subscribe(schedulePush),

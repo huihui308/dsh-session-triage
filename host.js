@@ -25,7 +25,7 @@ const MAX_TITLE = 200
 const MAX_REASON = 120
 const LEVELS = new Set(['red', 'amber', 'green'])
 
-const EMPTY = () => ({ version: 1, savedAt: 0, unread: {}, triage: {}, running: {}, interrupted: {} })
+const EMPTY = () => ({ version: 1, savedAt: 0, unread: {}, seen: {}, triage: {}, running: {}, interrupted: {} })
 
 function dshHome(env = process.env) {
   return env.DSH_HOME || join(homedir(), '.dsh')
@@ -62,6 +62,12 @@ function normalize(raw) {
     if (!isId(id) || stamp === null) continue
     unread[id] = stamp
   }
+  const seen = {}
+  for (const [id, at] of Object.entries(source.seen !== null && typeof source.seen === 'object' ? source.seen : {})) {
+    const stamp = finite(at)
+    if (!isId(id) || stamp === null) continue
+    seen[id] = stamp
+  }
   const triage = {}
   for (const [id, value] of Object.entries(source.triage !== null && typeof source.triage === 'object' ? source.triage : {})) {
     if (!isId(id) || value === null || typeof value !== 'object' || !LEVELS.has(value.level)) continue
@@ -86,6 +92,7 @@ function normalize(raw) {
     version: 1,
     savedAt: Date.now(),
     unread: trim(unread, (at) => at),
+    seen: trim(seen, (at) => at),
     triage: trim(triage, (entry) => entry.updatedAt),
     running: Object.fromEntries(Object.entries(running).slice(0, MAX_ENTRIES)),
     interrupted: trim(interrupted, (entry) => entry.at),
